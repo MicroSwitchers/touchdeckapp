@@ -78,45 +78,49 @@
     }
 
     // ═════════════════════════════════════════════════════════════
-    // iOS SPEECH PRIMING — fires on EVERY touch/click
+    // iOS SPEECH PRIMING — fires on touchstart only
     //
     // iOS Safari requires speechSynthesis.speak() to be called in
-    // a user-gesture context. But Flutter dispatches touches
+    // a user-gesture context. Flutter dispatches touches
     // asynchronously (~200ms delay), so Dart's speak() call arrives
     // AFTER iOS has closed the gesture window.
     //
-    // Fix: On every touch, we immediately speak a slow, silent
-    // warmup utterance. This keeps speechSynthesis in an "active"
-    // (speaking) state. When Dart's async speak() arrives ~200ms
-    // later, it calls cancel() + speak(). Because the synth was
-    // JUST active from the warmup (started in a real user gesture),
-    // iOS allows the new speak() call.
+    // Fix: On touchstart, immediately speak an ultra-short silent
+    // utterance (zero-width space at max rate). It completes in
+    // milliseconds, refreshing iOS's ~2s activation window without
+    // holding the audio session. Dart's async speak() call arrives
+    // well within that window.
+    //
+    // IMPORTANT: Only touchstart — NOT touchend or click.
+    // touchend is redundant; click fires AFTER Flutter handles the
+    // gesture (~300ms), which would disrupt recording/audio playback.
     // ═════════════════════════════════════════════════════════════
 
+    var _lastPrimeTime = 0;
+
     function _touchPrime() {
-      // Don't interrupt real speech
+      // Don't interrupt real speech, and throttle to once per 100ms
       if (_speakingReal) return;
+      var now = Date.now();
+      if (now - _lastPrimeTime < 100) return;
+      _lastPrimeTime = now;
 
       try {
-        // Cancel any previous warmup
-        if (synth.speaking || synth.pending) { synth.cancel(); }
-
-        // Speak a long, slow, silent warmup to keep synth "warm"
-        // for ~2-3 seconds — well past the ~200ms until Dart calls speak().
-        // Uses periods which take real time to synthesize but are nearly
-        // inaudible at volume 0.01 on a phone speaker.
-        var w = new SpeechSynthesisUtterance('. . . . . . . . . . . . .');
-        w.volume = 0.01;
-        w.rate   = 0.1;
+        // Ultra-short warmup: ZWS at max rate, zero volume.
+        // Completes in <10ms — refreshes the activation window
+        // without holding the audio session.
+        if (synth.pending) { synth.cancel(); }
+        var w = new SpeechSynthesisUtterance('\u200B');
+        w.volume = 0;
+        w.rate   = 10;
         w.onend = w.onerror = function() {};
         synth.speak(w);
       } catch(e) {}
     }
 
-    // Capture-phase: fires before Flutter's handlers
+    // Capture-phase touchstart only — fires before Flutter's handlers
+    // and before touchend/click which Flutter uses for gesture detection.
     document.addEventListener('touchstart', _touchPrime, { passive: true, capture: true });
-    document.addEventListener('touchend',   _touchPrime, { passive: true, capture: true });
-    document.addEventListener('click',      _touchPrime, { passive: true, capture: true });
 
     // ═════════════════════════════════════════════════════════════
     // ONE-TIME AudioContext + HTMLAudioElement unlock
