@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    TouchTab icon — speech bubble with AAC sound-wave bars.
+    Designed to work as:
+      • Regular icon  (browser tab, bookmark)
+      • PWA home-screen icon
+      • Maskable icon  (content within the central 80% safe zone)
+      • Apple touch icon
+  -->
+
+  <!-- Full-bleed background — browser/OS applies rounding for home-screen icons -->
+  <rect width="512" height="512" fill="#09090b"/>
+
+  <!-- Indigo speech bubble body  (safe-zone: ~x100..412  y110..360) -->
+  <rect x="100" y="110" width="312" height="210" rx="44" fill="#6366f1"/>
+
+  <!-- Bubble tail pointing bottom-left, tucked inside safe zone -->
+  <polygon points="148,318  124,392  218,318" fill="#6366f1"/>
+
+  <!-- Three white sound-wave bars (AAC / speaking symbol) -->
+  <!-- Left bar — shorter -->
+  <rect x="175" y="172" width="34" height="100" rx="17" fill="white" opacity="0.85"/>
+  <!-- Centre bar — tallest -->
+  <rect x="239" y="148" width="34" height="148" rx="17" fill="white"/>
+  <!-- Right bar — shorter -->
+  <rect x="303" y="172" width="34" height="100" rx="17" fill="white" opacity="0.85"/>
+</svg>

@@ -26,6 +26,25 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: 'launcher_icon'
+  ios: true
+  image_path: 'icon/icon.png'
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: 'icon/icon.png'
+    background_color: '#09090b'
+    theme_color: '#6366f1'
+  windows:
+    generate: true
+    image_path: 'icon/icon.png'
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: 'icon/icon.png'
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
