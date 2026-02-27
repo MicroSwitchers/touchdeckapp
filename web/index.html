@@ -35,6 +35,7 @@
   <!--
     TouchDeck Web Speech API helper.
     Provides window.tdTTS with speak / stop / unlock methods.
+    Also provides window.tdAudio for recorded-audio playback.
     Works on Chrome (desktop + Android) and Safari (iOS 14.5+).
   -->
   <script>
@@ -44,11 +45,10 @@
     var synth = window.speechSynthesis;
     var _safetyTimer   = null;
     var _speechDone    = false;
-    var _unlockPending = false;
 
     // ── Voice loading ───────────────────────────────────────────
-    // Browsers (especially iOS Safari) load voices asynchronously.
-    // Eagerly load and keep refreshing so we always have the latest list.
+    // iOS Safari does NOT fire onvoiceschanged and loads voices lazily.
+    // Poll aggressively at startup so voices are ready before first tap.
     window._tdTTSVoices = [];
     function _loadVoices() {
       var v = synth.getVoices();
@@ -58,6 +58,10 @@
     if ('onvoiceschanged' in synth) {
       synth.onvoiceschanged = _loadVoices;
     }
+    // Fallback polling for iOS Safari (which may never fire onvoiceschanged)
+    [200, 500, 1000, 2000, 3500, 6000].forEach(function(ms) {
+      setTimeout(_loadVoices, ms);
+    });
 
     // ── Helper: fire the Dart completion bridge ─────────────────
     function _notifyDone() {
@@ -68,39 +72,124 @@
     function _pickVoice(lang) {
       var voices = window._tdTTSVoices;
       var prefix = (lang || 'en').split('-')[0];
-      // Prefer local (on-device) voices
       for (var i = 0; i < voices.length; i++) {
         if (voices[i].lang.indexOf(prefix) === 0 && voices[i].localService) {
           return voices[i];
         }
       }
-      // Fall back to any matching voice
       for (var i = 0; i < voices.length; i++) {
         if (voices[i].lang.indexOf(prefix) === 0) { return voices[i]; }
       }
       return null;
     }
 
+    // ═════════════════════════════════════════════════════════════
+    // GLOBAL AUDIO UNLOCK — runs on the FIRST raw DOM touch/click
+    // so iOS Safari considers it a genuine user gesture.
+    // This unlocks both SpeechSynthesis AND HTMLAudioElement for
+    // the entire session. Must happen BEFORE Flutter processes
+    // the touch (Flutter's web engine dispatches asynchronously).
+    // ═════════════════════════════════════════════════════════════
+    var _audioUnlocked = false;
+
+    function _globalUnlock() {
+      if (_audioUnlocked) return;
+      _audioUnlocked = true;
+
+      // 1. Unlock SpeechSynthesis
+      try {
+        var su = new SpeechSynthesisUtterance('\u200B');
+        su.volume = 0;
+        su.rate   = 10;
+        su.onend = su.onerror = function() {};
+        synth.speak(su);
+      } catch (e) {}
+
+      // 2. Unlock AudioContext (used internally by audioplayers_web)
+      try {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          var ctx = new AudioCtx();
+          var buf = ctx.createBuffer(1, 1, 22050);
+          var src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+          if (ctx.state === 'suspended') { ctx.resume(); }
+        }
+      } catch (e) {}
+
+      // 3. Unlock HTMLAudioElement — play a tiny silent MP3.
+      //    Once ANY <audio> has played in a user gesture, iOS allows
+      //    all subsequent <audio>.play() calls in the same tab.
+      try {
+        var silentMp3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAABhgBAAAAA//tQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQZB4P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        var a = new Audio(silentMp3);
+        a.volume = 0.01;
+        a.play().then(function() { a.pause(); a = null; }).catch(function() {});
+      } catch (e) {}
+
+      // Remove listeners after first unlock
+      document.removeEventListener('touchstart', _globalUnlock, true);
+      document.removeEventListener('touchend', _globalUnlock, true);
+      document.removeEventListener('click', _globalUnlock, true);
+    }
+
+    // Capture-phase listeners fire before Flutter's own listeners
+    document.addEventListener('touchstart', _globalUnlock, { passive: true, capture: true });
+    document.addEventListener('touchend',   _globalUnlock, { passive: true, capture: true });
+    document.addEventListener('click',      _globalUnlock, { passive: true, capture: true });
+
+    // ═════════════════════════════════════════════════════════════
+    // tdAudio — Direct HTML5 audio playback for recorded phrases.
+    // Bypasses audioplayers (which may break on iOS due to async).
+    // ═════════════════════════════════════════════════════════════
+    var _currentAudio = null;
+
+    window.tdAudio = {
+      play: function (url, volume) {
+        // Stop previous
+        if (_currentAudio) {
+          try { _currentAudio.pause(); _currentAudio.currentTime = 0; } catch(e) {}
+        }
+        var a = new Audio(url);
+        a.volume = Math.min(Math.max(volume || 1, 0), 1);
+        _currentAudio = a;
+        a.onended = function () {
+          _currentAudio = null;
+          if (typeof window.tdAudioDone === 'function') { window.tdAudioDone(); }
+        };
+        a.onerror = function () {
+          _currentAudio = null;
+          if (typeof window.tdAudioDone === 'function') { window.tdAudioDone(); }
+        };
+        a.play().catch(function (e) {
+          console.warn('[tdAudio] play failed:', e);
+          _currentAudio = null;
+          if (typeof window.tdAudioDone === 'function') { window.tdAudioDone(); }
+        });
+      },
+      stop: function () {
+        if (_currentAudio) {
+          try { _currentAudio.pause(); _currentAudio.currentTime = 0; } catch(e) {}
+          _currentAudio = null;
+        }
+      }
+    };
+
+    // ═════════════════════════════════════════════════════════════
+    // tdTTS — Text-to-Speech via Web Speech API
+    // ═════════════════════════════════════════════════════════════
     window.tdTTS = {
 
       // ── unlock ───────────────────────────────────────────────
-      // MUST be called from within a user-gesture handler the first time.
-      // Speaks a zero-width-space at maximum rate (ends in <10 ms) to
-      // activate the iOS Safari SpeechSynthesis audio context.
+      // Called by _globalUnlock on first touch.
+      // Can also be called manually; guards against double calls.
       unlock: function () {
-        if (_unlockPending || synth.speaking || synth.pending) return;
-        try {
-          _unlockPending = true;
-          var u = new SpeechSynthesisUtterance('\u200B');
-          u.volume = 0;
-          u.rate   = 10;
-          u.onend = u.onerror = function () { _unlockPending = false; };
-          synth.speak(u);
-        } catch (e) { _unlockPending = false; }
+        // globalUnlock already handles this; keep as no-op fallback
       },
 
       // ── getVoices ─────────────────────────────────────────────
-      // Returns a JSON string: [{name, uri, lang, local}, ...]
       getVoices: function () {
         return JSON.stringify(window._tdTTSVoices.map(function (v) {
           return { name: v.name, uri: v.voiceURI, lang: v.lang, local: v.localService };
@@ -108,20 +197,14 @@
       },
 
       // ── speak ────────────────────────────────────────────────
-      // Speaks `text` at the given `rate` (0.1–10, default 0.9).
-      // If `voiceURI` is non-empty the matching voice is used; otherwise
-      // auto-picks the best local English voice.
-      // Calls window.tdTTSDone() when the utterance is complete.
       speak: function (text, rate, voiceURI) {
         if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
         _speechDone = false;
 
-        // Cancel any previous real speech; let the tiny unlock utterance finish
-        if (!_unlockPending && (synth.speaking || synth.pending)) {
+        // Always cancel first — clean slate
+        if (synth.speaking || synth.pending) {
           synth.cancel();
         }
-
-        // iOS Safari occasionally pauses synthesis in the background
         if (synth.paused) { synth.resume(); }
 
         var spRate = (typeof rate === 'number' && rate > 0) ? rate : 0.9;
@@ -132,6 +215,7 @@
         u.pitch  = 1.0;
         u.volume = 1.0;
 
+        // Voice selection
         var bestVoice = null;
         if (voiceURI) {
           for (var i = 0; i < window._tdTTSVoices.length; i++) {
@@ -153,16 +237,15 @@
 
         u.onend  = _done;
         u.onerror = function (e) {
-          // 'interrupted' / 'canceled' are normal when stop() is called
           if (e.error !== 'interrupted' && e.error !== 'canceled') { _done(); }
         };
 
         synth.speak(u);
 
-        // Poke resume in case iOS Safari paused the queue between speak() calls
+        // iOS Safari: poke resume after speak
         if (synth.paused) { synth.resume(); }
 
-        // Safety timeout: word-count estimate + generous buffer
+        // Safety timeout
         var words = text.trim().split(/\s+/).length;
         var ms = Math.max(2500, Math.round(words * 450 / spRate) + 2000);
         _safetyTimer = setTimeout(function () {

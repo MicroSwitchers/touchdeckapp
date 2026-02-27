@@ -75,7 +75,7 @@ void Function()? _webTtsOnComplete;
 
 bool _callbackRegistered = false;
 
-/// Register window.tdTTSDone as a Dart callback bridge.
+/// Register window.tdTTSDone and window.tdAudioDone as Dart callback bridges.
 /// Must be called once at app startup.
 void initWebTtsCallback() {
   if (_callbackRegistered) return;
@@ -85,15 +85,17 @@ void initWebTtsCallback() {
     _webTtsOnComplete = null;
     cb?.call();
   }.toJS;
+  globalContext['tdAudioDone'] = () {
+    final cb = _webAudioOnComplete;
+    _webAudioOnComplete = null;
+    cb?.call();
+  }.toJS;
 }
 
-/// Unlock the iOS Safari SpeechSynthesis audio context.
-/// MUST be called synchronously inside a user-gesture handler.
+/// Unlock is now handled at the raw DOM level (touchstart/click)
+/// in index.html. This is a no-op kept for API compatibility.
 void unlockTtsForMobileBrowser(dynamic ignored) {
-  try {
-    final tts = globalContext['tdTTS'];
-    if (tts != null) (tts as JSObject).callMethodVarArgs('unlock'.toJS, []);
-  } catch (_) {}
+  // No-op — global unlock happens at the DOM level
 }
 
 /// Speak [text] at [rate] using the voice identified by [voiceURI].
@@ -140,3 +142,47 @@ void ttsStop() {
     if (tts != null) (tts as JSObject).callMethodVarArgs('stop'.toJS, []);
   } catch (_) {}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Direct JS audio playback — bypasses audioplayers which breaks on iOS
+// because its async gaps lose the user-gesture context.
+// Uses window.tdAudio defined in web/index.html.
+// ─────────────────────────────────────────────────────────────────────────
+
+void Function()? _webAudioOnComplete;
+
+/// Play recorded audio directly via JS <audio> element.
+/// [url] is a blob URL from recording. [volume] should be 0.0–1.0.
+/// Fires [onComplete] when playback ends.
+void webPlayAudio(String url, double volume, void Function() onComplete) {
+  _webAudioOnComplete = onComplete;
+  try {
+    final audio = globalContext['tdAudio'];
+    if (audio != null) {
+      (audio as JSObject).callMethodVarArgs('play'.toJS, [url.toJS, volume.toJS]);
+    } else {
+      _webAudioOnComplete = null;
+      onComplete();
+    }
+  } catch (_) {
+    _webAudioOnComplete = null;
+    onComplete();
+  }
+}
+
+/// Stop any currently playing recorded audio.
+void webStopAudio() {
+  _webAudioOnComplete = null;
+  try {
+    final audio = globalContext['tdAudio'];
+    if (audio != null) (audio as JSObject).callMethodVarArgs('stop'.toJS, []);
+  } catch (_) {}
+}
+
+/// Synchronous path lookup — no async gaps, keeps iOS gesture context.
+String audioFilePathSync(String btnId, int idx) =>
+    _webAudioPaths['${btnId}_$idx'] ?? '';
+
+/// Synchronous existence check.
+bool audioFileExistsSync(String path) =>
+    path.isNotEmpty && _webAudioPaths.containsValue(path);

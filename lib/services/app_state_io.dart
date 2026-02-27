@@ -93,3 +93,17 @@ void storeWebAudioPath(String btnId, int idx, String blobUrl) {}
 /// No-op: blob URL tracking is only needed on web.
 void clearWebAudioPath(String btnId, int idx) {}
 
+/// No-op: JS audio playback is only needed on web.
+void webPlayAudio(String url, double volume, void Function() onComplete) {
+  onComplete();
+}
+
+/// No-op: JS audio stop is only needed on web.
+void webStopAudio() {}
+
+/// No-op: synchronous path lookup is only needed on web.
+String audioFilePathSync(String btnId, int idx) => '';
+
+/// No-op: synchronous existence check is only needed on web.
+bool audioFileExistsSync(String path) => false;
+

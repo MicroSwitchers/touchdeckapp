@@ -69,7 +69,8 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> ttsVoices = []; // normalised for settings UI
   String selectedVoiceURI = '';
   double ttsRate = 1.0; // 1.0 = normal speed (range 0.25–2.0)
-  bool _ttsUnlocked = false; // tracks if TTS unlocked for mobile browsers
+  // _ttsUnlocked intentionally removed — unlock is called on every tap;
+  // the JS side guards against duplicate or overlapping unlock calls.
 
   // ── Audio playback ───────────────────────────────────────────────
   final AudioPlayer _player = AudioPlayer();
@@ -163,11 +164,11 @@ class AppState extends ChangeNotifier {
   Future<void> refreshWebVoices() => _loadWebVoices();
 
   /// Unlock the iOS Safari SpeechSynthesis audio context.
-  /// Called SYNCHRONOUSLY inside the user-gesture handler so the browser
-  /// considers the subsequent speak() call within the gesture context.
+  /// Called SYNCHRONOUSLY inside the user-gesture handler on every tap so
+  /// the audio context is re-activated even after the app is backgrounded.
+  /// The JS unlock() function self-guards against duplicate/concurrent calls.
   void _ensureTtsUnlocked() {
-    if (_ttsUnlocked || !kIsWeb) return;
-    _ttsUnlocked = true;
+    if (!kIsWeb) return;
     platform.unlockTtsForMobileBrowser(null);
   }
 
@@ -464,23 +465,55 @@ class AppState extends ChangeNotifier {
   // ── Audio playback ───────────────────────────────────────────────
   Future<void> _playRecordedAudio(String btnId, int phraseIdx) async {
     if (!platform.hasFileAudio) return;
-    final file = await platform.audioFilePath(btnId, phraseIdx);
-    if (!await platform.audioFileExists(file)) return;
 
-    isSpeaking = true;
-    playingButtonId = btnId;
-    notifyListeners();
+    if (kIsWeb) {
+      // Web: use synchronous path lookup + direct JS audio to avoid
+      // async gaps that break iOS Safari's user-gesture context.
+      final file = platform.audioFilePathSync(btnId, phraseIdx);
+      if (!platform.audioFileExistsSync(file)) return;
 
-    await _player.setVolume(playbackGain.clamp(0.0, 5.0));
-    await _player.play(kIsWeb ? UrlSource(file) : DeviceFileSource(file));
+      isSpeaking = true;
+      playingButtonId = btnId;
+      notifyListeners();
+
+      final vol = playbackGain.clamp(0.0, 1.0);
+      platform.webPlayAudio(file, vol, () {
+        if (isSpeaking && playingButtonId == btnId) {
+          isSpeaking = false;
+          playingButtonId = null;
+          notifyListeners();
+        }
+      });
+    } else {
+      // Native: use audioplayers as before
+      final file = await platform.audioFilePath(btnId, phraseIdx);
+      if (!await platform.audioFileExists(file)) return;
+
+      isSpeaking = true;
+      playingButtonId = btnId;
+      notifyListeners();
+
+      final vol = playbackGain.clamp(0.0, 5.0);
+      await _player.setVolume(vol);
+      await _player.play(DeviceFileSource(file));
+    }
   }
 
   Future<void> playPreview(String btnId, int phraseIdx) async {
     if (!platform.hasFileAudio) return;
-    final file = await platform.audioFilePath(btnId, phraseIdx);
-    if (!await platform.audioFileExists(file)) return;
-    await _player.setVolume(playbackGain.clamp(0.0, 5.0));
-    await _player.play(kIsWeb ? UrlSource(file) : DeviceFileSource(file));
+
+    if (kIsWeb) {
+      final file = platform.audioFilePathSync(btnId, phraseIdx);
+      if (!platform.audioFileExistsSync(file)) return;
+      final vol = playbackGain.clamp(0.0, 1.0);
+      platform.webPlayAudio(file, vol, () {});
+    } else {
+      final file = await platform.audioFilePath(btnId, phraseIdx);
+      if (!await platform.audioFileExists(file)) return;
+      final vol = playbackGain.clamp(0.0, 5.0);
+      await _player.setVolume(vol);
+      await _player.play(DeviceFileSource(file));
+    }
   }
 
   // ── Recording ────────────────────────────────────────────────────
