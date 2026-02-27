@@ -97,17 +97,20 @@
     // ═════════════════════════════════════════════════════════════
 
     var _lastPrimeTime = 0;
+    var _isRecording    = false;  // set by Dart before/after getUserMedia
 
     function _touchPrime() {
-      // Don't interrupt real speech, and throttle to once per 100ms
+      // Don't interrupt real speech, don't interfere with recording,
+      // and throttle to once per 100ms.
       if (_speakingReal) return;
+      if (_isRecording)  return;   // <-- KEY: skip when mic is active
       var now = Date.now();
       if (now - _lastPrimeTime < 100) return;
       _lastPrimeTime = now;
 
       try {
         // Ultra-short warmup: ZWS at max rate, zero volume.
-        // Completes in <10ms — refreshes the activation window
+        // Completes in <10ms — refreshes iOS activation window
         // without holding the audio session.
         if (synth.pending) { synth.cancel(); }
         var w = new SpeechSynthesisUtterance('\u200B');
@@ -121,6 +124,32 @@
     // Capture-phase touchstart only — fires before Flutter's handlers
     // and before touchend/click which Flutter uses for gesture detection.
     document.addEventListener('touchstart', _touchPrime, { passive: true, capture: true });
+
+    // ═════════════════════════════════════════════════════════════
+    // tdRecord — called by Dart to coordinate iOS audio session
+    // around microphone use, preventing TTS/recording conflicts.
+    // ═════════════════════════════════════════════════════════════
+    window.tdRecord = {
+      // Call this synchronously BEFORE starting getUserMedia.
+      // Cancels any pending TTS and signals _touchPrime to skip
+      // so iOS can switch its audio session to record mode.
+      prepare: function () {
+        _isRecording = true;
+        _speakingReal = false;
+        if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        try {
+          if (synth.speaking || synth.pending) { synth.cancel(); }
+        } catch (e) {}
+      },
+
+      // Call this AFTER recording is fully stopped.
+      // Re-enables _touchPrime so the next user tap can re-prime TTS.
+      cleanup: function () {
+        _isRecording = false;
+        // Don't try to re-prime here — we're not inside a gesture.
+        // The next touchstart will prime naturally.
+      }
+    };
 
     // ═════════════════════════════════════════════════════════════
     // ONE-TIME AudioContext + HTMLAudioElement unlock
