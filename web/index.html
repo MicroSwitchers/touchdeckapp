@@ -109,11 +109,14 @@
       _lastPrimeTime = now;
 
       try {
-        // Ultra-short warmup: ZWS at max rate, zero volume.
-        // Completes in <10ms — refreshes iOS activation window
-        // without holding the audio session.
-        if (synth.pending) { synth.cancel(); }
-        var w = new SpeechSynthesisUtterance('\u200B');
+        // Prime with a real (but silent) utterance — a period.
+        // iOS WebKit ignores zero-width space (\u200B) and other
+        // non-characters, so the activation window was never being
+        // opened. A period/space gives iOS real speech content to
+        // begin processing, which establishes the audio session.
+        // Rate=10 means it completes in <50ms, well before Dart speaks.
+        if (synth.speaking || synth.pending) { synth.cancel(); }
+        var w = new SpeechSynthesisUtterance('.');
         w.volume = 0;
         w.rate   = 10;
         w.onend = w.onerror = function() {};
@@ -245,13 +248,6 @@
         _speechDone = false;
         _speakingReal = true;
 
-        // Cancel warmup or previous speech — synth was JUST active
-        // from the touchPrime warmup, so iOS allows this cancel+speak.
-        if (synth.speaking || synth.pending) {
-          synth.cancel();
-        }
-        if (synth.paused) { synth.resume(); }
-
         var spRate = (typeof rate === 'number' && rate > 0) ? rate : 0.9;
 
         var u = new SpeechSynthesisUtterance(text);
@@ -285,15 +281,29 @@
           if (e.error !== 'interrupted' && e.error !== 'canceled') { _done(); }
         };
 
-        synth.speak(u);
-        if (synth.paused) { synth.resume(); }
-
-        // Safety timeout
+        // Safety timeout — set up before the potential async gap below.
         var words = text.trim().split(/\s+/).length;
         var ms = Math.max(2500, Math.round(words * 450 / spRate) + 2000);
         _safetyTimer = setTimeout(function () {
           if (!_speechDone) { _speechDone = true; _speakingReal = false; _notifyDone(); }
         }, ms);
+
+        function _doSpeak() {
+          if (synth.paused) { synth.resume(); }
+          synth.speak(u);
+          if (synth.paused) { synth.resume(); }
+        }
+
+        // iOS Safari bug: calling speak() immediately after cancel()
+        // silently fails. If something is still queued (the period prime
+        // may not have finished yet), cancel it then wait 50ms before
+        // speaking. 50ms is well within the ~2s gesture activation window.
+        if (synth.speaking || synth.pending) {
+          synth.cancel();
+          setTimeout(_doSpeak, 50);
+        } else {
+          _doSpeak();
+        }
       },
 
       stop: function () {
