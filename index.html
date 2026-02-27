@@ -45,10 +45,9 @@
     var synth = window.speechSynthesis;
     var _safetyTimer   = null;
     var _speechDone    = false;
+    var _speakingReal  = false; // true while real (non-warmup) speech plays
 
     // ── Voice loading ───────────────────────────────────────────
-    // iOS Safari does NOT fire onvoiceschanged and loads voices lazily.
-    // Poll aggressively at startup so voices are ready before first tap.
     window._tdTTSVoices = [];
     function _loadVoices() {
       var v = synth.getVoices();
@@ -58,54 +57,78 @@
     if ('onvoiceschanged' in synth) {
       synth.onvoiceschanged = _loadVoices;
     }
-    // Fallback polling for iOS Safari (which may never fire onvoiceschanged)
     [200, 500, 1000, 2000, 3500, 6000].forEach(function(ms) {
       setTimeout(_loadVoices, ms);
     });
 
-    // ── Helper: fire the Dart completion bridge ─────────────────
     function _notifyDone() {
       if (typeof window.tdTTSDone === 'function') { window.tdTTSDone(); }
     }
 
-    // ── Helper: pick the best English voice ────────────────────
     function _pickVoice(lang) {
       var voices = window._tdTTSVoices;
       var prefix = (lang || 'en').split('-')[0];
       for (var i = 0; i < voices.length; i++) {
-        if (voices[i].lang.indexOf(prefix) === 0 && voices[i].localService) {
-          return voices[i];
-        }
+        if (voices[i].lang.indexOf(prefix) === 0 && voices[i].localService) return voices[i];
       }
       for (var i = 0; i < voices.length; i++) {
-        if (voices[i].lang.indexOf(prefix) === 0) { return voices[i]; }
+        if (voices[i].lang.indexOf(prefix) === 0) return voices[i];
       }
       return null;
     }
 
     // ═════════════════════════════════════════════════════════════
-    // GLOBAL AUDIO UNLOCK — runs on the FIRST raw DOM touch/click
-    // so iOS Safari considers it a genuine user gesture.
-    // This unlocks both SpeechSynthesis AND HTMLAudioElement for
-    // the entire session. Must happen BEFORE Flutter processes
-    // the touch (Flutter's web engine dispatches asynchronously).
+    // iOS SPEECH PRIMING — fires on EVERY touch/click
+    //
+    // iOS Safari requires speechSynthesis.speak() to be called in
+    // a user-gesture context. But Flutter dispatches touches
+    // asynchronously (~200ms delay), so Dart's speak() call arrives
+    // AFTER iOS has closed the gesture window.
+    //
+    // Fix: On every touch, we immediately speak a slow, silent
+    // warmup utterance. This keeps speechSynthesis in an "active"
+    // (speaking) state. When Dart's async speak() arrives ~200ms
+    // later, it calls cancel() + speak(). Because the synth was
+    // JUST active from the warmup (started in a real user gesture),
+    // iOS allows the new speak() call.
+    // ═════════════════════════════════════════════════════════════
+
+    function _touchPrime() {
+      // Don't interrupt real speech
+      if (_speakingReal) return;
+
+      try {
+        // Cancel any previous warmup
+        if (synth.speaking || synth.pending) { synth.cancel(); }
+
+        // Speak a long, slow, silent warmup to keep synth "warm"
+        // for ~2-3 seconds — well past the ~200ms until Dart calls speak().
+        // Uses periods which take real time to synthesize but are nearly
+        // inaudible at volume 0.01 on a phone speaker.
+        var w = new SpeechSynthesisUtterance('. . . . . . . . . . . . .');
+        w.volume = 0.01;
+        w.rate   = 0.1;
+        w.onend = w.onerror = function() {};
+        synth.speak(w);
+      } catch(e) {}
+    }
+
+    // Capture-phase: fires before Flutter's handlers
+    document.addEventListener('touchstart', _touchPrime, { passive: true, capture: true });
+    document.addEventListener('touchend',   _touchPrime, { passive: true, capture: true });
+    document.addEventListener('click',      _touchPrime, { passive: true, capture: true });
+
+    // ═════════════════════════════════════════════════════════════
+    // ONE-TIME AudioContext + HTMLAudioElement unlock
+    // (Only needed once per page load, unlike SpeechSynthesis)
     // ═════════════════════════════════════════════════════════════
     var _audioUnlocked = false;
 
-    function _globalUnlock() {
+    function _unlockAudio() {
       if (_audioUnlocked) return;
       _audioUnlocked = true;
 
-      // 1. Unlock SpeechSynthesis
-      try {
-        var su = new SpeechSynthesisUtterance('\u200B');
-        su.volume = 0;
-        su.rate   = 10;
-        su.onend = su.onerror = function() {};
-        synth.speak(su);
-      } catch (e) {}
-
-      // 2. Unlock AudioContext (used internally by audioplayers_web)
+      // Unlock AudioContext
       try {
         var AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) {
@@ -119,9 +142,7 @@
         }
       } catch (e) {}
 
-      // 3. Unlock HTMLAudioElement — play a tiny silent MP3.
-      //    Once ANY <audio> has played in a user gesture, iOS allows
-      //    all subsequent <audio>.play() calls in the same tab.
+      // Unlock HTMLAudioElement with silent MP3
       try {
         var silentMp3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAABhgBAAAAA//tQZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQZB4P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
         var a = new Audio(silentMp3);
@@ -129,26 +150,22 @@
         a.play().then(function() { a.pause(); a = null; }).catch(function() {});
       } catch (e) {}
 
-      // Remove listeners after first unlock
-      document.removeEventListener('touchstart', _globalUnlock, true);
-      document.removeEventListener('touchend', _globalUnlock, true);
-      document.removeEventListener('click', _globalUnlock, true);
+      document.removeEventListener('touchstart', _unlockAudio, true);
+      document.removeEventListener('touchend', _unlockAudio, true);
+      document.removeEventListener('click', _unlockAudio, true);
     }
 
-    // Capture-phase listeners fire before Flutter's own listeners
-    document.addEventListener('touchstart', _globalUnlock, { passive: true, capture: true });
-    document.addEventListener('touchend',   _globalUnlock, { passive: true, capture: true });
-    document.addEventListener('click',      _globalUnlock, { passive: true, capture: true });
+    document.addEventListener('touchstart', _unlockAudio, { passive: true, capture: true });
+    document.addEventListener('touchend',   _unlockAudio, { passive: true, capture: true });
+    document.addEventListener('click',      _unlockAudio, { passive: true, capture: true });
 
     // ═════════════════════════════════════════════════════════════
-    // tdAudio — Direct HTML5 audio playback for recorded phrases.
-    // Bypasses audioplayers (which may break on iOS due to async).
+    // tdAudio — Direct HTML5 audio playback for recorded phrases
     // ═════════════════════════════════════════════════════════════
     var _currentAudio = null;
 
     window.tdAudio = {
       play: function (url, volume) {
-        // Stop previous
         if (_currentAudio) {
           try { _currentAudio.pause(); _currentAudio.currentTime = 0; } catch(e) {}
         }
@@ -182,26 +199,21 @@
     // ═════════════════════════════════════════════════════════════
     window.tdTTS = {
 
-      // ── unlock ───────────────────────────────────────────────
-      // Called by _globalUnlock on first touch.
-      // Can also be called manually; guards against double calls.
-      unlock: function () {
-        // globalUnlock already handles this; keep as no-op fallback
-      },
+      unlock: function () { /* handled by _touchPrime */ },
 
-      // ── getVoices ─────────────────────────────────────────────
       getVoices: function () {
         return JSON.stringify(window._tdTTSVoices.map(function (v) {
           return { name: v.name, uri: v.voiceURI, lang: v.lang, local: v.localService };
         }));
       },
 
-      // ── speak ────────────────────────────────────────────────
       speak: function (text, rate, voiceURI) {
         if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
         _speechDone = false;
+        _speakingReal = true;
 
-        // Always cancel first — clean slate
+        // Cancel warmup or previous speech — synth was JUST active
+        // from the touchPrime warmup, so iOS allows this cancel+speak.
         if (synth.speaking || synth.pending) {
           synth.cancel();
         }
@@ -215,7 +227,6 @@
         u.pitch  = 1.0;
         u.volume = 1.0;
 
-        // Voice selection
         var bestVoice = null;
         if (voiceURI) {
           for (var i = 0; i < window._tdTTSVoices.length; i++) {
@@ -231,6 +242,7 @@
         function _done() {
           if (_speechDone) return;
           _speechDone = true;
+          _speakingReal = false;
           if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
           _notifyDone();
         }
@@ -241,21 +253,19 @@
         };
 
         synth.speak(u);
-
-        // iOS Safari: poke resume after speak
         if (synth.paused) { synth.resume(); }
 
         // Safety timeout
         var words = text.trim().split(/\s+/).length;
         var ms = Math.max(2500, Math.round(words * 450 / spRate) + 2000);
         _safetyTimer = setTimeout(function () {
-          if (!_speechDone) { _speechDone = true; _notifyDone(); }
+          if (!_speechDone) { _speechDone = true; _speakingReal = false; _notifyDone(); }
         }, ms);
       },
 
-      // ── stop ─────────────────────────────────────────────────
       stop: function () {
         _speechDone = true;
+        _speakingReal = false;
         if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
         if (synth.speaking || synth.pending) { synth.cancel(); }
       }
