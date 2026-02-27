@@ -294,16 +294,13 @@
           if (synth.paused) { synth.resume(); }
         }
 
-        // iOS Safari bug: calling speak() immediately after cancel()
-        // silently fails. If something is still queued (the period prime
-        // may not have finished yet), cancel it then wait 50ms before
-        // speaking. 50ms is well within the ~2s gesture activation window.
-        if (synth.speaking || synth.pending) {
-          synth.cancel();
-          setTimeout(_doSpeak, 50);
-        } else {
-          _doSpeak();
-        }
+        // Cancel any pending speech (prime or previous), then speak
+        // immediately in the same synchronous call. iOS Safari requires
+        // synth.speak() to stay within the ~2s activation window opened
+        // by _touchPrime on touchstart. Any async gap (setTimeout) pushes
+        // speak() outside that window and causes silent failure on iOS.
+        if (synth.speaking || synth.pending) { synth.cancel(); }
+        _doSpeak();
       },
 
       stop: function () {
