@@ -107,3 +107,9 @@ String audioFilePathSync(String btnId, int idx) => '';
 /// No-op: synchronous existence check is only needed on web.
 bool audioFileExistsSync(String path) => false;
 
+/// No-op: recording coordination is only needed on web.
+void prepareWebRecording() {}
+
+/// No-op: recording coordination is only needed on web.
+void cleanupWebRecording() {}
+

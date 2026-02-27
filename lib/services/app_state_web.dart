@@ -186,3 +186,26 @@ String audioFilePathSync(String btnId, int idx) =>
 /// Synchronous existence check.
 bool audioFileExistsSync(String path) =>
     path.isNotEmpty && _webAudioPaths.containsValue(path);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Recording coordination — synchronously signal the JS side so it can
+// gate _touchPrime and clear TTS state around getUserMedia calls.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Call synchronously BEFORE starting a recording.
+/// Cancels any pending TTS and prevents _touchPrime from firing during mic use.
+void prepareWebRecording() {
+  try {
+    final rec = globalContext['tdRecord'];
+    if (rec != null) (rec as JSObject).callMethodVarArgs('prepare'.toJS, []);
+  } catch (_) {}
+}
+
+/// Call AFTER recording is fully stopped.
+/// Re-enables _touchPrime so subsequent TTS taps work normally.
+void cleanupWebRecording() {
+  try {
+    final rec = globalContext['tdRecord'];
+    if (rec != null) (rec as JSObject).callMethodVarArgs('cleanup'.toJS, []);
+  } catch (_) {}
+}

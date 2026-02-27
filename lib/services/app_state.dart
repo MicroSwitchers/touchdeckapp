@@ -523,7 +523,17 @@ class AppState extends ChangeNotifier {
       await stopRecording();
       return;
     }
+
+    // On web/iOS: synchronously cancel TTS and block _touchPrime so the iOS
+    // audio session is free to switch to record mode when getUserMedia fires.
+    if (kIsWeb) {
+      platform.prepareWebRecording();
+      // Give iOS ~150ms to finish any lingering TTS/audio before we request mic.
+      await Future.delayed(const Duration(milliseconds: 150));
+    }
+
     if (!await _recorder.hasPermission()) {
+      if (kIsWeb) platform.cleanupWebRecording();
       showOutputBar('Microphone permission denied');
       return;
     }
@@ -557,6 +567,13 @@ class AppState extends ChangeNotifier {
     }
     _currentRecordingBtnId = null;
     _currentRecordingIdx = null;
+
+    // On web/iOS: re-enable _touchPrime so the next user tap can prime TTS again.
+    // Do this after state reset so the UI updates before cleanup runs.
+    if (kIsWeb) {
+      platform.cleanupWebRecording();
+    }
+
     notifyListeners();
   }
 
