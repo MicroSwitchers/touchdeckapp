@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="touch_deck">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>touch_deck</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!--
+    TouchDeck Web Speech API helper.
+    Provides window.tdTTS with speak / stop / unlock methods.
+    Works on Chrome (desktop + Android) and Safari (iOS 14.5+).
+  -->
+  <script>
+  (function () {
+    'use strict';
+
+    var synth = window.speechSynthesis;
+    var _safetyTimer   = null;
+    var _speechDone    = false;
+    var _unlockPending = false;
+
+    // ── Voice loading ───────────────────────────────────────────
+    // Browsers (especially iOS Safari) load voices asynchronously.
+    // Eagerly load and keep refreshing so we always have the latest list.
+    window._tdTTSVoices = [];
+    function _loadVoices() {
+      var v = synth.getVoices();
+      if (v && v.length > 0) { window._tdTTSVoices = v; }
+    }
+    _loadVoices();
+    if ('onvoiceschanged' in synth) {
+      synth.onvoiceschanged = _loadVoices;
+    }
+
+    // ── Helper: fire the Dart completion bridge ─────────────────
+    function _notifyDone() {
+      if (typeof window.tdTTSDone === 'function') { window.tdTTSDone(); }
+    }
+
+    // ── Helper: pick the best English voice ────────────────────
+    function _pickVoice(lang) {
+      var voices = window._tdTTSVoices;
+      var prefix = (lang || 'en').split('-')[0];
+      // Prefer local (on-device) voices
+      for (var i = 0; i < voices.length; i++) {
+        if (voices[i].lang.indexOf(prefix) === 0 && voices[i].localService) {
+          return voices[i];
+        }
+      }
+      // Fall back to any matching voice
+      for (var i = 0; i < voices.length; i++) {
+        if (voices[i].lang.indexOf(prefix) === 0) { return voices[i]; }
+      }
+      return null;
+    }
+
+    window.tdTTS = {
+
+      // ── unlock ───────────────────────────────────────────────
+      // MUST be called from within a user-gesture handler the first time.
+      // Speaks a zero-width-space at maximum rate (ends in <10 ms) to
+      // activate the iOS Safari SpeechSynthesis audio context.
+      unlock: function () {
+        if (_unlockPending || synth.speaking || synth.pending) return;
+        try {
+          _unlockPending = true;
+          var u = new SpeechSynthesisUtterance('\u200B');
+          u.volume = 0;
+          u.rate   = 10;
+          u.onend = u.onerror = function () { _unlockPending = false; };
+          synth.speak(u);
+        } catch (e) { _unlockPending = false; }
+      },
+
+      // ── getVoices ─────────────────────────────────────────────
+      // Returns a JSON string: [{name, uri, lang, local}, ...]
+      getVoices: function () {
+        return JSON.stringify(window._tdTTSVoices.map(function (v) {
+          return { name: v.name, uri: v.voiceURI, lang: v.lang, local: v.localService };
+        }));
+      },
+
+      // ── speak ────────────────────────────────────────────────
+      // Speaks `text` at the given `rate` (0.1–10, default 0.9).
+      // If `voiceURI` is non-empty the matching voice is used; otherwise
+      // auto-picks the best local English voice.
+      // Calls window.tdTTSDone() when the utterance is complete.
+      speak: function (text, rate, voiceURI) {
+        if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        _speechDone = false;
+
+        // Cancel any previous real speech; let the tiny unlock utterance finish
+        if (!_unlockPending && (synth.speaking || synth.pending)) {
+          synth.cancel();
+        }
+
+        // iOS Safari occasionally pauses synthesis in the background
+        if (synth.paused) { synth.resume(); }
+
+        var spRate = (typeof rate === 'number' && rate > 0) ? rate : 0.9;
+
+        var u = new SpeechSynthesisUtterance(text);
+        u.lang   = 'en-US';
+        u.rate   = spRate;
+        u.pitch  = 1.0;
+        u.volume = 1.0;
+
+        var bestVoice = null;
+        if (voiceURI) {
+          for (var i = 0; i < window._tdTTSVoices.length; i++) {
+            if (window._tdTTSVoices[i].voiceURI === voiceURI) {
+              bestVoice = window._tdTTSVoices[i];
+              break;
+            }
+          }
+        }
+        if (!bestVoice) { bestVoice = _pickVoice('en'); }
+        if (bestVoice) { u.voice = bestVoice; }
+
+        function _done() {
+          if (_speechDone) return;
+          _speechDone = true;
+          if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+          _notifyDone();
+        }
+
+        u.onend  = _done;
+        u.onerror = function (e) {
+          // 'interrupted' / 'canceled' are normal when stop() is called
+          if (e.error !== 'interrupted' && e.error !== 'canceled') { _done(); }
+        };
+
+        synth.speak(u);
+
+        // Poke resume in case iOS Safari paused the queue between speak() calls
+        if (synth.paused) { synth.resume(); }
+
+        // Safety timeout: word-count estimate + generous buffer
+        var words = text.trim().split(/\s+/).length;
+        var ms = Math.max(2500, Math.round(words * 450 / spRate) + 2000);
+        _safetyTimer = setTimeout(function () {
+          if (!_speechDone) { _speechDone = true; _notifyDone(); }
+        }, ms);
+      },
+
+      // ── stop ─────────────────────────────────────────────────
+      stop: function () {
+        _speechDone = true;
+        if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
+        if (synth.speaking || synth.pending) { synth.cancel(); }
+      }
+    };
+  })();
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
