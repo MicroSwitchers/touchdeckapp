@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "D:\\My Regular Program Install Space\\Flutter\\flutter\\packages\\flutter_tools\\gradle\\src\\main\\scripts\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\niall\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "D:\\My Code\\My HTML5 Projects\\TouchDeck\\flutter_version\\build\\.cxx\\debug\\1v2r4d5s\\x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\niall\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "D:\\My Code\\My HTML5 Projects\\TouchDeck\\flutter_version\\build\\.cxx\\debug\\1v2r4d5s\\x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}
