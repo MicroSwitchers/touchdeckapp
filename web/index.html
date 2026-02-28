@@ -113,21 +113,23 @@
       _lastPrimeTime = now;
 
       try {
-        // Ultra-short warmup: ZWS at max rate, zero volume.
-        // Completes in <10ms — refreshes iOS activation window
-        // without holding the audio session.
+        // Speak a long, slow, silent warmup to keep synth "warm"
+        // for ~2-3 seconds — well past the ~200ms until Dart calls speak().
+        // Uses periods which take real time to synthesize but are nearly
+        // inaudible at volume 0.01 on a phone speaker.
         if (synth.speaking || synth.pending) { synth.cancel(); }
-        var w = new SpeechSynthesisUtterance('\u200B');
-        w.volume = 0;
-        w.rate   = 10;
+        var w = new SpeechSynthesisUtterance('. . . . . . . . . . . . .');
+        w.volume = 0.01;
+        w.rate   = 0.1;
         w.onend = w.onerror = function() {};
         synth.speak(w);
       } catch(e) {}
     }
 
-    // Capture-phase touchstart only — fires before Flutter's handlers
-    // and before touchend/click which Flutter uses for gesture detection.
+    // Capture-phase: fires before Flutter's handlers
     document.addEventListener('touchstart', _touchPrime, { passive: true, capture: true });
+    document.addEventListener('touchend',   _touchPrime, { passive: true, capture: true });
+    document.addEventListener('click',      _touchPrime, { passive: true, capture: true });
 
     // ═════════════════════════════════════════════════════════════
     // tdRecord — called by Dart to coordinate iOS audio session

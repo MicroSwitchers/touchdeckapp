@@ -67,7 +67,7 @@ class _BigButtonState extends State<BigButton>
   Widget build(BuildContext context) {
     final c = widget.data.color;
     final pressed = widget.isPressed;
-    final size = 240.0 * widget.data.scale;
+      final size = 290.0 * widget.data.scale;
     final depth = (10.0 * widget.data.scale).clamp(8.0, 14.0);
 
     // Face sits at top:0, slab peeks out below
