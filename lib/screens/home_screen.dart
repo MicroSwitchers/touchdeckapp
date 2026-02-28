@@ -300,8 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onLongPressCancel: () => _endHold(),
       onTap: () {}, // block accidental tap
       child: SizedBox(
-        width: 56,
-        height: 56,
+        width: 64,
+        height: 64,
         child: ClipOval(
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -326,11 +326,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Progress ring
                   SizedBox(
-                    width: 46,
-                    height: 46,
+                    width: 54,
+                    height: 54,
                     child: CircularProgressIndicator(
                       value: _holdProgress,
-                      strokeWidth: 2.5,
+                      strokeWidth: 3.0,
                       backgroundColor: Colors.white.withValues(alpha: 0.08),
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFF818CF8)),
@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Icon(
                     Icons.settings_outlined,
-                    size: 22,
+                    size: 28,
                     color: _holdProgress > 0
                         ? const Color(0xFFA5B4FC)
                         : Colors.white.withValues(alpha: 0.50),
@@ -389,12 +389,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.open_with, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
+                  Icon(Icons.open_with, color: Colors.white, size: 24),
+                  SizedBox(width: 14),
                   Text(
                     'Drag to Move • Pinch / Scroll to Resize',
                     style: TextStyle(
                       color: Colors.white,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -439,9 +440,9 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () => state.togglePositioning(false),
-                icon: const Icon(Icons.lock, size: 20),
-                label: const Text('Lock Positions',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.lock, size: 24),
+                label: const Text('Lock',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF059669),
                   foregroundColor: Colors.white,
@@ -478,10 +479,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: Colors.white),
-            const SizedBox(width: 8),
+            Icon(icon, size: 24, color: Colors.white),
+            const SizedBox(width: 10),
             Text(label,
                 style: const TextStyle(
+                    fontSize: 16,
                     color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),

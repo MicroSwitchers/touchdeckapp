@@ -63,18 +63,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: const Color(0xFF6366F1).withValues(alpha: 0.3),
                             ),
                           ),
-                          child: const Icon(Icons.settings, color: Color(0xFFA5B4FC), size: 20),
+                          child: const Icon(Icons.settings, color: Color(0xFFA5B4FC), size: 24),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         ShaderMask(
                           shaderCallback: (bounds) => const LinearGradient(
                             colors: [Colors.white, Color(0xFFA1A1AA)],
                           ).createShader(bounds),
                           child: const Text(
-                            'Settings',
+                            'SETTINGS',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 24,
                               fontWeight: FontWeight.w900,
+                              letterSpacing: 2.0,
                               color: Colors.white,
                             ),
                           ),
@@ -82,8 +83,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Spacer(),
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(Icons.close,
-                              color: Colors.white.withValues(alpha: 0.4)),
+                          icon: Icon(Icons.close, size: 28,
+                              color: Colors.white.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -135,8 +136,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     elevation: 8,
                   ),
                   child: const Text(
-                    'Done',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    'DONE',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1.5),
                   ),
                 ),
               ),
@@ -153,12 +154,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _tab = tab),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
                 color: active ? const Color(0xFF818CF8) : Colors.transparent,
-                width: 2,
+                width: 3,
               ),
             ),
           ),
@@ -166,10 +167,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             label.toUpperCase(),
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-              color: active ? Colors.white : Colors.white.withValues(alpha: 0.35),
+              letterSpacing: 1.2,
+              color: active ? Colors.white : Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -237,11 +238,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Text(
                         b.label.isNotEmpty ? b.label : 'Button ${i + 1}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: active
                               ? const Color(0xFFC7D2FE)
-                              : Colors.white.withValues(alpha: 0.4),
+                              : Colors.white.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -267,13 +268,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.add,
-                        size: 16,
+                        size: 20,
                         color: const Color(0xFF818CF8).withValues(alpha: 0.7)),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Text(
                       'Add',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF818CF8).withValues(alpha: 0.7),
                       ),
@@ -308,12 +309,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Touch target
         _sectionLabel('Touch Target', Icons.touch_app, const Color(0xFF6366F1)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Tap the entire screen, or just the button.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
             _toggleButton(
@@ -349,12 +350,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Phrases & Audio
         _sectionLabel('Phrases & Audio', Icons.chat_bubble_outline, const Color(0xFF818CF8)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Add up to 3 phrases to cycle through on each tap. Recording audio overrides the robot voice.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         ...List.generate(3, (idx) => _phraseRow(state, btn, idx)),
         const SizedBox(height: 20),
 
@@ -392,15 +393,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'This will remove all buttons and create a single default button.',
                 () => state.resetToDefault(),
               ),
-              icon: const Icon(Icons.refresh, size: 16),
+              icon: const Icon(Icons.refresh, size: 20),
               label: const Text('RESET TO DEFAULT',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFF87171),
                 side: BorderSide(
                     color: const Color(0xFFEF4444).withValues(alpha: 0.25),
                     style: BorderStyle.solid),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -576,12 +577,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         // Activation Mode
         _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           '"Release" helps users who drag their finger.${state.buttons.length > 1 ? ' "Scan" highlights buttons one by one for switch users.' : ''}',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
             _toggleButton(
@@ -676,12 +677,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Tap Feedback
         _sectionLabel('Tap Feedback', Icons.notifications, const Color(0xFFFBBF24)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Get confirmation when you tap a button.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
             _toggleButton(
@@ -712,12 +713,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Activation Cooldown
         _sectionLabel(
             'Activation Cooldown', Icons.hourglass_bottom, const Color(0xFF34D399)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Prevents accidental double-taps by ignoring extra touches for a short time.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         _sliderCard(
           label: 'Debounce Time',
           valueLabel: '${state.debounceTime}s',
@@ -736,12 +737,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Recorded Voice Volume
         _sectionLabel(
             'Recorded Voice Volume', Icons.volume_up, const Color(0xFF60A5FA)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Boosts the volume of your microphone recordings.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         _sliderCard(
           label: 'Playback Boost',
           valueLabel: '${state.playbackGain.toStringAsFixed(1)}×',
@@ -759,12 +760,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Speech
         _sectionLabel('Speech', Icons.record_voice_over, const Color(0xFF34D399)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Adjust the volume, speaking speed, and choose a TTS voice.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         _sliderCard(
           label: 'Speaking Rate',
           valueLabel: '${state.ttsRate.toStringAsFixed(2)}×',
@@ -794,12 +795,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Button Label Position
         _sectionLabel('Button Label Position', Icons.text_format, const Color(0xFFF472B6)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Where the button label appears.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
             _toggleButton(
@@ -837,12 +838,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Button Layout
         _sectionLabel('Button Layout', Icons.grid_view, const Color(0xFF818CF8)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'Enter positioning mode to arrange your buttons.',
-          style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -852,9 +853,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               state.closeSettings();
               state.togglePositioning(true);
             },
-            icon: const Icon(Icons.open_with, size: 16),
+            icon: const Icon(Icons.open_with, size: 20),
             label: const Text('MOVE & PLACE BUTTONS',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFFA5B4FC),
               side: BorderSide(
@@ -1192,12 +1193,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _sectionLabel(String text, IconData icon, Color color) {
     return Row(
       children: [
-        Icon(icon, size: 12, color: color),
-        const SizedBox(width: 6),
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 10),
         Text(
           text.toUpperCase(),
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 16,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.5,
             color: color,
@@ -1215,13 +1216,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return TextFormField(
       initialValue: value,
       onChanged: onChanged,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
+      style: const TextStyle(color: Colors.white, fontSize: 16),
       decoration: InputDecoration(
         hintText: placeholder,
-        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25)),
+        hintStyle: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.35)),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.05),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
@@ -1275,13 +1276,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                   color: active
                       ? const Color(0xFFC7D2FE)
                       : enabled
-                          ? Colors.white.withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.2),
+                          ? Colors.white.withValues(alpha: 0.8)
+                          : Colors.white.withValues(alpha: 0.4),
                 ),
               ),
             ],
@@ -1314,13 +1316,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(label.toUpperCase(),
                   style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha: 0.4),
-                      letterSpacing: 1)),
+                      color: Colors.white.withValues(alpha: 0.6),
+                      letterSpacing: 1.2)),
               Text(valueLabel,
                   style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 14,
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF22D3EE))),
@@ -1360,15 +1362,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(label.toUpperCase(),
                     style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withValues(alpha: 0.4),
-                        letterSpacing: 0.5)),
-                const SizedBox(height: 2),
+                        color: Colors.white.withValues(alpha: 0.6),
+                        letterSpacing: 1.2)),
+                const SizedBox(height: 6),
                 Text(subtitle,
                     style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.white.withValues(alpha: 0.3))),
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.4))),
               ],
             ),
           ),
@@ -1390,11 +1392,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text(
                 value ? 'ON' : 'OFF',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                   color: value
                       ? const Color(0xFFC7D2FE)
-                      : Colors.white.withValues(alpha: 0.4),
+                      : Colors.white.withValues(alpha: 0.8),
                 ),
               ),
             ),
@@ -1446,8 +1449,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Text(
           label.toUpperCase(),
           style: TextStyle(
-            fontSize: small ? 11 : 12,
+            fontSize: small ? 13 : 15,
             fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
             color: const Color(0xFFF87171),
           ),
         ),
@@ -1486,7 +1490,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(title,
                   style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: Colors.white)),
             ),
@@ -1494,14 +1498,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: Text(description,
             style: TextStyle(
-                fontSize: 13,
-                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 15,
+                color: Colors.white.withValues(alpha: 0.6),
                 height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text('Cancel',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.4))),
+                style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1509,13 +1513,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.of(ctx).pop();
             },
             style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
             child:
-                const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Confirm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
