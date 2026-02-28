@@ -476,7 +476,7 @@ class AppState extends ChangeNotifier {
       playingButtonId = btnId;
       notifyListeners();
 
-      final vol = playbackGain.clamp(0.0, 1.0);
+        final vol = playbackGain.clamp(0.0, 5.0);
       platform.webPlayAudio(file, vol, () {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
@@ -505,7 +505,7 @@ class AppState extends ChangeNotifier {
     if (kIsWeb) {
       final file = platform.audioFilePathSync(btnId, phraseIdx);
       if (!platform.audioFileExistsSync(file)) return;
-      final vol = playbackGain.clamp(0.0, 1.0);
+      final vol = playbackGain.clamp(0.0, 5.0);
       platform.webPlayAudio(file, vol, () {});
     } else {
       final file = await platform.audioFilePath(btnId, phraseIdx);

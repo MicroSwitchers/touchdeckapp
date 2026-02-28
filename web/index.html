@@ -207,15 +207,45 @@
     // tdAudio — Direct HTML5 audio playback for recorded phrases
     // ═════════════════════════════════════════════════════════════
     var _currentAudio = null;
+    var _audioCtx = null;
+    var _audioSrc = null;
+    var _audioGain = null;
 
     window.tdAudio = {
       play: function (url, volume) {
         if (_currentAudio) {
           try { _currentAudio.pause(); _currentAudio.currentTime = 0; } catch(e) {}
         }
+        
         var a = new Audio(url);
-        a.volume = Math.min(Math.max(volume || 1, 0), 1);
         _currentAudio = a;
+
+        // Route through Web Audio API to allow gains > 1.0 (amplify volume)
+        try {
+          var AudioCtxConstructor = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtxConstructor && volume > 1.0) {
+            if (!_audioCtx) { _audioCtx = new AudioCtxConstructor(); }
+            if (_audioCtx.state === 'suspended') { _audioCtx.resume(); }
+
+            // Ensure previous source is disconnected
+            if (_audioSrc) { try { _audioSrc.disconnect(); } catch(e) {} }
+            if (_audioGain) { try { _audioGain.disconnect(); } catch(e) {} }
+
+            _audioSrc = _audioCtx.createMediaElementSource(a);
+            _audioGain = _audioCtx.createGain();
+            _audioGain.gain.value = volume;
+
+            _audioSrc.connect(_audioGain);
+            _audioGain.connect(_audioCtx.destination);
+          } else {
+            // Standard volume (0.0 to 1.0)
+            a.volume = Math.min(Math.max(volume || 1, 0), 1);
+          }
+        } catch(e) {
+          // Fallback if routing fails
+          a.volume = Math.min(Math.max(volume || 1, 0), 1);
+        }
+
         a.onended = function () {
           _currentAudio = null;
           if (typeof window.tdAudioDone === 'function') { window.tdAudioDone(); }
