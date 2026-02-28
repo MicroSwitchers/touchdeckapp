@@ -761,7 +761,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Speech', Icons.record_voice_over, const Color(0xFF34D399)),
         const SizedBox(height: 4),
         Text(
-          'Adjust the speaking speed and choose a TTS voice.',
+          'Adjust the volume, speaking speed, and choose a TTS voice.',
           style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.35)),
         ),
         const SizedBox(height: 8),
@@ -774,6 +774,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           divisions: 7,
           onChanged: (v) {
             state.setTtsRate(v);
+          },
+        ),
+        const SizedBox(height: 12),
+        _sliderCard(
+          label: 'Text to Speech Volume',
+          valueLabel: '${(state.ttsVolume * 100).toInt()}%',
+          value: state.ttsVolume,
+          min: 0.0,
+          max: 1.0,
+          divisions: 10,
+          onChanged: (v) {
+            state.setTtsVolume(v);
           },
         ),
         const SizedBox(height: 12),

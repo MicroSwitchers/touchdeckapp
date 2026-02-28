@@ -75,7 +75,7 @@ void initWebTtsCallback() {}
 void unlockTtsForMobileBrowser(dynamic ignored) {}
 
 /// Not called on native (flutter_tts is used instead).
-void ttsSpeak(String text, double rate, String voiceURI, void Function() onComplete) {
+void ttsSpeak(String text, double rate, double volume, String voiceURI, void Function() onComplete) {
   // On native, app_state.dart uses flutter_tts directly.
   // This stub should never be reached, but call onComplete defensively.
   onComplete();

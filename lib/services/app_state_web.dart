@@ -101,12 +101,12 @@ void unlockTtsForMobileBrowser(dynamic ignored) {
 /// Speak [text] at [rate] using the voice identified by [voiceURI].
 /// Passes the voiceURI to JS so it can select the matching SpeechSynthesisVoice.
 /// Fires [onComplete] when the utterance finishes.
-void ttsSpeak(String text, double rate, String voiceURI, void Function() onComplete) {
+void ttsSpeak(String text, double rate, double volume, String voiceURI, void Function() onComplete) {
   _webTtsOnComplete = onComplete;
   try {
     final tts = globalContext['tdTTS'];
     if (tts != null) {
-      (tts as JSObject).callMethodVarArgs('speak'.toJS, [text.toJS, rate.toJS, voiceURI.toJS]);
+      (tts as JSObject).callMethodVarArgs('speak'.toJS, [text.toJS, rate.toJS, volume.toJS, voiceURI.toJS]);
     } else {
       // tdTTS not available — complete immediately so the app doesn't hang
       _webTtsOnComplete = null;

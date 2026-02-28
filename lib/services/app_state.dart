@@ -32,6 +32,7 @@ class AppState extends ChangeNotifier {
   bool touchTargetScreen = false; // false = button, true = whole screen
   double debounceTime = 0;
   double playbackGain = 3.0;
+  double ttsVolume = 1.0;
   double scanInterval = 2.0;
   String scanColor = 'Yellow';
   bool scanTick = false;
@@ -124,9 +125,7 @@ class AppState extends ChangeNotifier {
     // ── Native platforms: use flutter_tts ──────────────────────────
     await _tts.setLanguage('en-US');
     await _tts.setSpeechRate(ttsRate);
-    await _tts.setVolume(1.0);
-    await _tts.setPitch(1.0);
-
+      await _tts.setVolume(ttsVolume);
     voices = await _tts.getVoices ?? [];
     ttsVoices = voices.map((v) {
       final m = Map<String, dynamic>.from(v as Map);
@@ -211,8 +210,8 @@ class AppState extends ChangeNotifier {
     scanClearDebounce = p.getBool('scanClearDebounce') ?? false;
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
-
-    final obpJson = p.getString('outputBarPos');
+      ttsVolume = p.getDouble('ttsVolume') ?? 1.0;
+      final obpJson = p.getString('outputBarPos');
     if (obpJson != null) {
       try {
         final m = jsonDecode(obpJson);
@@ -252,8 +251,7 @@ class AppState extends ChangeNotifier {
     await p.setBool('scanAnnounce', scanAnnounce);
     await p.setBool('scanClearDebounce', scanClearDebounce);
     await p.setString('selectedVoiceURI', selectedVoiceURI);
-    await p.setDouble('ttsRate', ttsRate);
-    await p.setString(
+    await p.setDouble('ttsRate', ttsRate);      await p.setDouble('ttsVolume', ttsVolume);    await p.setString(
       'outputBarPos',
       jsonEncode({'x': outputBarPos.dx, 'y': outputBarPos.dy}),
     );
@@ -408,7 +406,7 @@ class AppState extends ChangeNotifier {
 
     if (kIsWeb) {
       // Web: delegate to the tdTTS JS helper defined in web/index.html.
-      platform.ttsSpeak(text, ttsRate, selectedVoiceURI, () {
+      platform.ttsSpeak(text, ttsRate, ttsVolume, selectedVoiceURI, () {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
           playingButtonId = null;
@@ -419,6 +417,7 @@ class AppState extends ChangeNotifier {
       // Native: apply rate + voice then speak via flutter_tts.
       () async {
         await _tts.setSpeechRate(ttsRate);
+        await _tts.setVolume(ttsVolume);
         if (selectedVoiceURI.isNotEmpty && voices.isNotEmpty) {
           final match = voices.cast<Map>().firstWhere(
             (v) => (v['name'] ?? '') == selectedVoiceURI,
@@ -440,6 +439,13 @@ class AppState extends ChangeNotifier {
   /// Set TTS speaking rate and persist.
   void setTtsRate(double rate) {
     ttsRate = rate.clamp(0.25, 2.0);
+    saveState();
+    notifyListeners();
+  }
+
+  /// Set TTS volume and persist.
+  void setTtsVolume(double vol) {
+    ttsVolume = vol.clamp(0.0, 1.0);
     saveState();
     notifyListeners();
   }

@@ -281,7 +281,7 @@
         }));
       },
 
-      speak: function (text, rate, voiceURI) {
+      speak: function (text, rate, volume, voiceURI) {
         if (_safetyTimer) { clearTimeout(_safetyTimer); _safetyTimer = null; }
         _speechDone = false;
         _speakingReal = true;
@@ -294,12 +294,13 @@
         if (synth.paused) { synth.resume(); }
 
         var spRate = (typeof rate === 'number' && rate > 0) ? rate : 0.9;
+        var spVol = (typeof volume === 'number' && volume >= 0) ? volume : 1.0;
 
         var u = new SpeechSynthesisUtterance(text);
         u.lang   = 'en-US';
         u.rate   = spRate;
         u.pitch  = 1.0;
-        u.volume = 1.0;
+        u.volume = spVol;
 
         var bestVoice = null;
         if (voiceURI) {
