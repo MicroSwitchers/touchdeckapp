@@ -24933,8 +24933,8 @@ _.d=c
 _.f=_.e=!0
 _.r=!1
 _.w=0
-_.x=3
-_.y=1
+_.x=5
+_.y=0.5
 _.z=2
 _.Q="Yellow"
 _.ay=_.ax=_.at=_.as=!1
@@ -81855,7 +81855,7 @@ l.push(B.c7)
 l.push(A.bv("Boosts the volume of your microphone recordings.",m,m,m,A.bN(m,m,B.e.ab(0.35),m,m,m,m,m,m,m,m,10,m,m,m,m,m,!0,m,m,m,m,m,m,m,m),m,m))
 l.push(B.bm)
 k=B.c.af(a.x,1)
-l.push(n.rL(8,"Playback Boost",5,1,new A.alV(a),a.x,k+"\xd7"))
+l.push(n.rL(38,"Playback Boost",20,1,new A.alV(a),a.x,k+"\xd7"))
 l.push(B.bR)
 l.push(n.hA("Speech",B.k0,B.di))
 l.push(B.c7)
@@ -82320,7 +82320,7 @@ q.r=m===!0
 m=A.v_(k.h(0,"debounceTime"))
 q.w=m==null?0:m
 m=A.v_(k.h(0,"playbackGain"))
-q.x=m==null?3:m
+q.x=m==null?5:m
 m=A.v_(k.h(0,"scanInterval"))
 q.z=m==null?2:m
 m=A.bj(k.h(0,"scanColor"))
@@ -82336,7 +82336,7 @@ q.p2=m==null?"":m
 m=A.v_(k.h(0,"ttsRate"))
 q.p3=m==null?1:m
 m=A.v_(k.h(0,"ttsVolume"))
-q.y=m==null?1:m
+q.y=m==null?0.5:m
 p=A.bj(k.h(0,"outputBarPos"))
 if(p!=null)try{o=B.bs.y_(p,null)
 q.ch=new A.f(A.dF(J.fF(o,"x")),A.dF(J.fF(o,"y")))}catch(i){}m=A.v_(k.h(0,"outputBarScale"))
@@ -82474,7 +82474,7 @@ if(!(o.length!==0&&$.q0.F8(o))){s=1
 break}p.fr=!0
 p.dy=a
 p.a0()
-A.azJ(o,B.c.cv(p.x,0,5),new A.Wo(p,a))
+A.azJ(o,B.c.cv(p.x,0,20),new A.Wo(p,a))
 case 1:return A.H(q,r)}})
 return A.I($async$Dt,r)},
 Hb(a,b){return this.amT(a,b)},
@@ -82482,7 +82482,7 @@ amT(a,b){var s=0,r=A.J(t.H),q,p=this,o
 var $async$Hb=A.K(function(c,d){if(c===1)return A.G(d,r)
 while(true)switch(s){case 0:o=A.az2(a,b)
 if(!(o.length!==0&&$.q0.F8(o))){s=1
-break}A.azJ(o,B.c.cv(p.x,0,5),new A.WC())
+break}A.azJ(o,B.c.cv(p.x,0,20),new A.WC())
 case 1:return A.H(q,r)}})
 return A.I($async$Hb,r)},
 mm(a,b){return this.anX(a,b)},
