@@ -747,8 +747,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           valueLabel: '${state.playbackGain.toStringAsFixed(1)}×',
           value: state.playbackGain,
           min: 1,
-          max: 5,
-          divisions: 8,
+          max: 20,
+          divisions: 38,
           onChanged: (v) {
             state.playbackGain = v;
             state.saveState();

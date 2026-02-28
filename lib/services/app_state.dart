@@ -31,8 +31,8 @@ class AppState extends ChangeNotifier {
   bool audioCueEnabled = true;
   bool touchTargetScreen = false; // false = button, true = whole screen
   double debounceTime = 0;
-  double playbackGain = 3.0;
-  double ttsVolume = 1.0;
+  double playbackGain = 5.0;
+  double ttsVolume = 0.5;
   double scanInterval = 2.0;
   String scanColor = 'Yellow';
   bool scanTick = false;
@@ -202,7 +202,7 @@ class AppState extends ChangeNotifier {
     audioCueEnabled = p.getBool('audioCueEnabled') ?? true;
     touchTargetScreen = p.getBool('touchTargetScreen') ?? false;
     debounceTime = p.getDouble('debounceTime') ?? 0;
-    playbackGain = p.getDouble('playbackGain') ?? 3.0;
+    playbackGain = p.getDouble('playbackGain') ?? 5.0;
     scanInterval = p.getDouble('scanInterval') ?? 2.0;
     scanColor = p.getString('scanColor') ?? 'Yellow';
     scanTick = p.getBool('scanTick') ?? false;
@@ -210,7 +210,7 @@ class AppState extends ChangeNotifier {
     scanClearDebounce = p.getBool('scanClearDebounce') ?? false;
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
-      ttsVolume = p.getDouble('ttsVolume') ?? 1.0;
+      ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
       final obpJson = p.getString('outputBarPos');
     if (obpJson != null) {
       try {
@@ -482,7 +482,7 @@ class AppState extends ChangeNotifier {
       playingButtonId = btnId;
       notifyListeners();
 
-        final vol = playbackGain.clamp(0.0, 5.0);
+        final vol = playbackGain.clamp(0.0, 20.0);
       platform.webPlayAudio(file, vol, () {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
@@ -499,7 +499,7 @@ class AppState extends ChangeNotifier {
       playingButtonId = btnId;
       notifyListeners();
 
-      final vol = playbackGain.clamp(0.0, 5.0);
+      final vol = playbackGain.clamp(0.0, 20.0);
       await _player.setVolume(vol);
       await _player.play(DeviceFileSource(file));
     }
@@ -511,12 +511,12 @@ class AppState extends ChangeNotifier {
     if (kIsWeb) {
       final file = platform.audioFilePathSync(btnId, phraseIdx);
       if (!platform.audioFileExistsSync(file)) return;
-      final vol = playbackGain.clamp(0.0, 5.0);
+      final vol = playbackGain.clamp(0.0, 20.0);
       platform.webPlayAudio(file, vol, () {});
     } else {
       final file = await platform.audioFilePath(btnId, phraseIdx);
       if (!await platform.audioFileExists(file)) return;
-      final vol = playbackGain.clamp(0.0, 5.0);
+      final vol = playbackGain.clamp(0.0, 20.0);
       await _player.setVolume(vol);
       await _player.play(DeviceFileSource(file));
     }
