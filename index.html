@@ -18,19 +18,21 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="TouchDeck — a privacy-first AAC communication app for people with complex communication needs.">
+  <meta name="theme-color" content="#09090b">
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS / Android PWA meta tags -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="touch_deck">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TouchDeck">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-  <!-- v1.1.2 Push Trigger -->
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>touch_deck</title>
+  <title>TouchDeck</title>
   <link rel="manifest" href="manifest.json">
 
   <!--
@@ -48,7 +50,7 @@
     var _speechDone    = false;
     var _speakingReal  = false; // true while real (non-warmup) speech plays
 
-    // â”€â”€ Voice loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Voice loading ───────────────────────────────────────────
     window._tdTTSVoices = [];
     function _loadVoices() {
       var v = synth.getVoices();
@@ -82,8 +84,8 @@
       return null;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // iOS SPEECH PRIMING â€” fires on touchstart only
+    // ═════════════════════════════════════════════════════════════
+    // iOS SPEECH PRIMING — fires on touchstart only
     //
     // iOS Safari requires speechSynthesis.speak() to be called in
     // a user-gesture context. Flutter dispatches touches
@@ -96,10 +98,10 @@
     // holding the audio session. Dart's async speak() call arrives
     // well within that window.
     //
-    // IMPORTANT: Only touchstart â€” NOT touchend or click.
+    // IMPORTANT: Only touchstart — NOT touchend or click.
     // touchend is redundant; click fires AFTER Flutter handles the
     // gesture (~300ms), which would disrupt recording/audio playback.
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
 
     var _lastPrimeTime = 0;
     var _isRecording    = false;  // set by Dart before/after getUserMedia
@@ -115,7 +117,7 @@
 
       try {
         // Speak a long, slow, silent warmup to keep synth "warm"
-        // for ~2-3 seconds â€” well past the ~200ms until Dart calls speak().
+        // for ~2-3 seconds — well past the ~200ms until Dart calls speak().
         // Uses periods which take real time to synthesize but are nearly
         // inaudible at volume 0.01 on a phone speaker.
         if (synth.speaking || synth.pending) { synth.cancel(); }
@@ -132,10 +134,10 @@
     document.addEventListener('touchend',   _touchPrime, { passive: true, capture: true });
     document.addEventListener('click',      _touchPrime, { passive: true, capture: true });
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // tdRecord â€” called by Dart to coordinate iOS audio session
+    // ═════════════════════════════════════════════════════════════
+    // tdRecord — called by Dart to coordinate iOS audio session
     // around microphone use, preventing TTS/recording conflicts.
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
     window.tdRecord = {
       // Call this synchronously BEFORE starting getUserMedia.
       // Cancels any pending TTS and signals _touchPrime to skip
@@ -162,10 +164,10 @@
       }
     };
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
     // ONE-TIME AudioContext + HTMLAudioElement unlock
     // (Only needed once per page load, unlike SpeechSynthesis)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
     var _audioUnlocked = false;
 
     function _unlockAudio() {
@@ -203,9 +205,9 @@
     document.addEventListener('touchend',   _unlockAudio, { passive: true, capture: true });
     document.addEventListener('click',      _unlockAudio, { passive: true, capture: true });
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // tdAudio â€” Direct HTML5 audio playback for recorded phrases
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
+    // tdAudio — Direct HTML5 audio playback for recorded phrases
+    // ═════════════════════════════════════════════════════════════
     var _currentAudio = null;
     var _audioCtx = null;
     var _audioSrc = null;
@@ -268,9 +270,9 @@
       }
     };
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // tdTTS â€” Text-to-Speech via Web Speech API
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ═════════════════════════════════════════════════════════════
+    // tdTTS — Text-to-Speech via Web Speech API
+    // ═════════════════════════════════════════════════════════════
     window.tdTTS = {
 
       unlock: function () { /* handled by _touchPrime */ },
@@ -286,7 +288,7 @@
         _speechDone = false;
         _speakingReal = true;
 
-        // Cancel warmup or previous speech â€” synth was JUST active
+        // Cancel warmup or previous speech — synth was JUST active
         // from the touchPrime warmup, so iOS allows this cancel+speak.
         if (synth.speaking || synth.pending) {
           synth.cancel();
@@ -355,6 +357,3 @@
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
-< ! - -   R e f r e s h   6 3 9 0 7 8 1 9 2 3 6 4 2 6 8 3 4 0   - - > 
- 
- 

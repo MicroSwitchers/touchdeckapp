@@ -1,12 +1,13 @@
 {
-    "name": "touch_deck",
-    "short_name": "touch_deck",
+    "id": "/TouchDeck/",
+    "name": "TouchDeck",
+    "short_name": "TouchDeck",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#09090b",
     "theme_color": "#6366f1",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "description": "A privacy-first AAC communication app for people with complex communication needs.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
