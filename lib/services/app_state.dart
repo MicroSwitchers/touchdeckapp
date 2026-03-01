@@ -258,9 +258,6 @@ class AppState extends ChangeNotifier {
       editingBtnId = buttons.isNotEmpty ? buttons.first.id : null;
     }
 
-    if (buttons.length == 1 && activationMode == ActivationMode.scan) {
-      activationMode = ActivationMode.press;
-    }
     if (buttons.length > 1) touchTargetScreen = false;
   }
 

@@ -760,7 +760,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
         const SizedBox(height: 8),
         Text(
-          '"Release" helps users who drag their finger.${state.buttons.length > 1 ? ' "Scan" highlights buttons one by one for switch users.' : ''}',
+          '"Release" helps users who drag their finger. "Scan" highlights buttons one by one for switch users.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -787,18 +787,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 state.notify();
               },
             ),
-            if (state.buttons.length > 1) ...[
-              const SizedBox(width: 8),
-              _toggleButton(
-                label: 'Scan',
-                active: state.activationMode == ActivationMode.scan,
-                onTap: () {
-                  state.activationMode = ActivationMode.scan;
-                  state.saveState();
-                  state.notify();
-                },
-              ),
-            ],
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Scan',
+              active: state.activationMode == ActivationMode.scan,
+              enabled: state.buttons.length > 1,
+              onTap: () {
+                state.activationMode = ActivationMode.scan;
+                state.saveState();
+                state.notify();
+              },
+            ),
           ],
         ),
 
