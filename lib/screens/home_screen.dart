@@ -403,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
               top: top - btnSize / 2 - (state.labelPos == LabelPosition.under && btn.label.isNotEmpty ? 20 : 0),
               child: child,
             );
-          }).toList(),
+          }),
             // Colour-picker swatches overlaid on each button in positioning mode
           if (state.isPositioningMode)
             ...state.buttons.map((btn) {
@@ -444,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         );
       },

@@ -209,3 +209,20 @@ void cleanupWebRecording() {
     if (rec != null) (rec as JSObject).callMethodVarArgs('cleanup'.toJS, []);
   } catch (_) {}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fullscreen — uses the browser Fullscreen API
+// ─────────────────────────────────────────────────────────────────────────
+
+void setWebFullscreen(bool value) {
+  try {
+    final doc = globalContext['document'] as JSObject?;
+    if (doc == null) return;
+    if (value) {
+      final docEl = doc['documentElement'] as JSObject?;
+      docEl?.callMethodVarArgs('requestFullscreen'.toJS, []);
+    } else {
+      doc.callMethodVarArgs('exitFullscreen'.toJS, []);
+    }
+  } catch (_) {}
+}

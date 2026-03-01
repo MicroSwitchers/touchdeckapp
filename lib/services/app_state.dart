@@ -39,9 +39,9 @@ class AppState extends ChangeNotifier {
   double ttsVolume = 0.5;
   double scanInterval = 2.0;
   String scanColor = 'Yellow';
-  bool scanTick = false;
-  bool scanAnnounce = false;
-  bool scanClearDebounce = false;
+  bool scanTick = true;
+  bool scanAnnounce = true;
+  bool scanResetOnActivate = true;
   String bgColorName = 'Very Dark'; // background colour choice
 
   // ── Menu access guard ─────────────────────────────────────────────
@@ -225,9 +225,9 @@ class AppState extends ChangeNotifier {
     playbackGain = p.getDouble('playbackGain') ?? 5.0;
     scanInterval = p.getDouble('scanInterval') ?? 2.0;
     scanColor = p.getString('scanColor') ?? 'Yellow';
-    scanTick = p.getBool('scanTick') ?? false;
-    scanAnnounce = p.getBool('scanAnnounce') ?? false;
-    scanClearDebounce = p.getBool('scanClearDebounce') ?? false;
+    scanTick = p.getBool('scanTick') ?? true;
+    scanAnnounce = p.getBool('scanAnnounce') ?? true;
+    scanResetOnActivate = p.getBool('scanResetOnActivate') ?? true;
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
       ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
@@ -279,7 +279,7 @@ class AppState extends ChangeNotifier {
     await p.setString('scanColor', scanColor);
     await p.setBool('scanTick', scanTick);
     await p.setBool('scanAnnounce', scanAnnounce);
-    await p.setBool('scanClearDebounce', scanClearDebounce);
+    await p.setBool('scanResetOnActivate', scanResetOnActivate);
     await p.setString('selectedVoiceURI', selectedVoiceURI);
     await p.setDouble('ttsRate', ttsRate);      await p.setDouble('ttsVolume', ttsVolume);    await p.setString(
       'outputBarPos',
@@ -725,18 +725,19 @@ class AppState extends ChangeNotifier {
     }
     scanIdx = 0;
     notifyListeners();
+    _startScanTimer();
+  }
+
+  // Starts (or restarts) the periodic scan timer without resetting scanIdx.
+  void _startScanTimer() {
+    _scanTimer?.cancel();
     _scanTimer = Timer.periodic(
       Duration(milliseconds: (scanInterval * 1000).round()),
       (_) {
         scanIdx = (scanIdx + 1) % buttons.length;
-        if (scanClearDebounce && inDebounce) {
-          _debounceTimer?.cancel();
-          inDebounce = false;
-        }
         if (scanAnnounce) {
           final label = buttons[scanIdx].label;
           if (label.isNotEmpty && !isSpeaking) {
-            // Use the unified TTS path so scan announce works on web too
             _speakTts(label, buttons[scanIdx].id);
           }
         }
@@ -758,6 +759,11 @@ class AppState extends ChangeNotifier {
     if (buttons.isEmpty) return;
     final btn = buttons[scanIdx % buttons.length];
     activateButton(btn.id);
+    // Reset the scan countdown so the user gets a full interval
+    // before the scanner moves on — gives time to respond.
+    if (scanResetOnActivate) {
+      _startScanTimer();
+    }
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -838,9 +844,14 @@ class AppState extends ChangeNotifier {
   // FULLSCREEN
   // ────────────────────────────────────────────────────────────────
   void _applyFullscreen() {
-    SystemChrome.setEnabledSystemUIMode(
-      isFullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
-    );
+    if (kIsWeb) {
+      // SystemChrome is a no-op on web — use the browser Fullscreen API.
+      platform.setWebFullscreen(isFullscreen);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(
+        isFullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      );
+    }
   }
 
   void setFullscreen(bool v) {

@@ -9,6 +9,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:vibration/vibration.dart';
 
+// Fullscreen on native is handled by SystemChrome in app_state.dart.
+void setWebFullscreen(bool value) {} // no-op
+
 // ─────────────────────────────────────────────────────────────────────────
 // Feature flags
 // ─────────────────────────────────────────────────────────────────────────

@@ -541,7 +541,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final hasAudio = idx < btn.hasAudio.length && btn.hasAudio[idx];
     final phraseText = btn.phrases[idx].trim();
     final hasTts = !hasAudio && phraseText.isNotEmpty;
-    final isEmpty = !hasAudio && phraseText.isEmpty;
     final isThisRecording = state.isRecording &&
         state.currentRecordingBtnId == btn.id &&
         state.currentRecordingIdx == idx;
@@ -845,11 +844,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _toggleRow(
-            label: 'Clear Cooldown on Advance',
-            subtitle: 'Resets activation cooldown when scanner moves',
-            value: state.scanClearDebounce,
+            label: 'Reset Countdown on Selection',
+            subtitle: 'Restart the scan timer each time a button is activated',
+            value: state.scanResetOnActivate,
             onTap: () {
-              state.scanClearDebounce = !state.scanClearDebounce;
+              state.scanResetOnActivate = !state.scanResetOnActivate;
               state.saveState();
               state.notify();
             },
