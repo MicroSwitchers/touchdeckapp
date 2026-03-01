@@ -352,6 +352,53 @@
     };
   })();
   </script>
+
+  <!--
+    iOS Safari fullscreen + text input fix.
+
+    iOS Safari shows a "Typing is not allowed in full screen" banner whenever
+    ANY <input> or <textarea> receives focus while in fullscreen — including
+    the hidden text field Flutter web uses internally for its text engine.
+    The user never intends to type; Flutter just keeps that element around.
+
+    Fix:
+      1. On fullscreenchange (entering fullscreen) — blur any focused input.
+      2. In capture phase, intercept focus events on input/textarea while in
+         fullscreen and immediately blur them, preventing the banner entirely.
+  -->
+  <script>
+  (function () {
+    'use strict';
+
+    function _isFullscreen() {
+      return !!(document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement);
+    }
+
+    function _blurActiveInput() {
+      var el = document.activeElement;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        el.blur();
+      }
+    }
+
+    // Blur on entering fullscreen
+    document.addEventListener('fullscreenchange',       _blurActiveInput, false);
+    document.addEventListener('webkitfullscreenchange', _blurActiveInput, false);
+    document.addEventListener('mozfullscreenchange',    _blurActiveInput, false);
+
+    // Intercept any focus on input/textarea while fullscreen is active
+    document.addEventListener('focus', function (e) {
+      if (!_isFullscreen()) return;
+      var el = e.target;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        e.stopPropagation();
+        setTimeout(function () { el.blur(); }, 0);
+      }
+    }, true /* capture */);
+  })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
