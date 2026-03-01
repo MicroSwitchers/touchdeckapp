@@ -20,10 +20,20 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // ── Settings hold-to-open ────────────────────────────────────────
-  Timer? _holdTimer;
-  double _holdProgress = 0;
-  static const _holdDuration = Duration(seconds: 3);
+  // ── Settings button guard ─────────────────────────────────────────────
+  Timer? _settingsHoldTimer;
+  double _settingsHoldProgress = 0;
+  int _settingsTapCount = 0;
+  Timer? _settingsTapTimer;
+
+  // ── Move button guard ───────────────────────────────────────────────
+  Timer? _moveHoldTimer;
+  double _moveHoldProgress = 0;
+  int _moveTapCount = 0;
+  Timer? _moveTapTimer;
+
+  // ── Session hint (shown once per session when guard button first touched) ──
+  bool _hasShownGuardHint = false;
 
   // ── Gesture tracking for positioning mode ────────────────────────
   String? _draggingBtnId;
@@ -33,27 +43,160 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _holdTimer?.cancel();
+    _settingsHoldTimer?.cancel();
+    _settingsTapTimer?.cancel();
+    _moveHoldTimer?.cancel();
+    _moveTapTimer?.cancel();
     super.dispose();
   }
 
-  void _startHold() {
-    final start = DateTime.now();
-    _holdTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      final elapsed = DateTime.now().difference(start).inMilliseconds;
-      final pct = (elapsed / _holdDuration.inMilliseconds).clamp(0.0, 1.0);
-      setState(() => _holdProgress = pct);
-      if (pct >= 1.0) {
-        _endHold();
-        _openSettings();
-      }
-    });
+  // ── Session guard hint ────────────────────────────────────────────────
+  void _showGuardHint(AppState state) {
+    if (_hasShownGuardHint) return;
+    setState(() => _hasShownGuardHint = true);
+    final String? msg;
+    switch (state.guardMode) {
+      case GuardMode.hold:
+        final secs = state.guardHoldSeconds.round();
+        msg = 'Hold this button for ${secs}s to open';
+      case GuardMode.taps:
+        msg = 'Tap this button ${state.guardTapCount} times quickly to open';
+      case GuardMode.off:
+        msg = null;
+    }
+    if (msg == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      ),
+    );
   }
 
-  void _endHold() {
-    _holdTimer?.cancel();
-    _holdTimer = null;
-    setState(() => _holdProgress = 0);
+  // ── Generic guard helpers ────────────────────────────────────────────
+  void _startHold({
+    required Timer? Function() getTimer,
+    required void Function(Timer?) setTimer,
+    required void Function(double) setProgress,
+    required double holdSeconds,
+    required VoidCallback onComplete,
+  }) {
+    final start = DateTime.now();
+    final t = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      final pct = (DateTime.now().difference(start).inMilliseconds /
+              (holdSeconds * 1000))
+          .clamp(0.0, 1.0);
+      setState(() => setProgress(pct));
+      if (pct >= 1.0) {
+        _endHold(currentTimer: getTimer(), setTimer: setTimer, setProgress: setProgress);
+        onComplete();
+      }
+    });
+    setTimer(t);
+  }
+
+  void _endHold({
+    required Timer? currentTimer,
+    required void Function(Timer?) setTimer,
+    required void Function(double) setProgress,
+  }) {
+    currentTimer?.cancel();
+    setTimer(null);
+    setState(() => setProgress(0));
+  }
+
+  void _handleTapGuard({
+    required int currentCount,
+    required void Function(int) setCount,
+    required Timer? tapTimer,
+    required void Function(Timer?) setTapTimer,
+    required int required,
+    required VoidCallback onComplete,
+  }) {
+    setTapTimer(null);
+    tapTimer?.cancel();
+    final newCount = currentCount + 1;
+    setState(() => setCount(newCount));
+    if (newCount >= required) {
+      setState(() => setCount(0));
+      onComplete();
+    } else {
+      final t = Timer(const Duration(milliseconds: 1500), () {
+        setState(() => setCount(0));
+      });
+      setTapTimer(t);
+    }
+  }
+
+  // Returns true when the background is light enough to need dark-coloured UI.
+  bool _isLight(Color c) => c.computeLuminance() > 0.4;
+
+  // ── Settings button actions ────────────────────────────────────────────
+  void _settingsHoldStart(AppState state) {
+    _showGuardHint(state);
+    _startHold(
+      getTimer: () => _settingsHoldTimer,
+      setTimer: (t) => _settingsHoldTimer = t,
+      setProgress: (v) => _settingsHoldProgress = v,
+      holdSeconds: state.guardHoldSeconds,
+      onComplete: _openSettings,
+    );
+  }
+
+  void _settingsHoldEnd() => _endHold(
+        currentTimer: _settingsHoldTimer,
+        setTimer: (t) => _settingsHoldTimer = t,
+        setProgress: (v) => _settingsHoldProgress = v,
+      );
+
+  void _settingsTap(AppState state) {
+    _showGuardHint(state);
+    _handleTapGuard(
+      currentCount: _settingsTapCount,
+      setCount: (v) => _settingsTapCount = v,
+      tapTimer: _settingsTapTimer,
+      setTapTimer: (t) => _settingsTapTimer = t,
+      required: state.guardTapCount,
+      onComplete: _openSettings,
+    );
+  }
+
+  // ── Move button actions ──────────────────────────────────────────────
+  void _moveHoldStart(AppState state) {
+    _showGuardHint(state);
+    _startHold(
+      getTimer: () => _moveHoldTimer,
+      setTimer: (t) => _moveHoldTimer = t,
+      setProgress: (v) => _moveHoldProgress = v,
+      holdSeconds: state.guardHoldSeconds,
+      onComplete: _openMoveMode,
+    );
+  }
+
+  void _moveHoldEnd() => _endHold(
+        currentTimer: _moveHoldTimer,
+        setTimer: (t) => _moveHoldTimer = t,
+        setProgress: (v) => _moveHoldProgress = v,
+      );
+
+  void _moveTap(AppState state) {
+    _showGuardHint(state);
+    _handleTapGuard(
+      currentCount: _moveTapCount,
+      setCount: (v) => _moveTapCount = v,
+      tapTimer: _moveTapTimer,
+      setTapTimer: (t) => _moveTapTimer = t,
+      required: state.guardTapCount,
+      onComplete: _openMoveMode,
+    );
+  }
+
+  void _openMoveMode() {
+    final state = context.read<AppState>();
+    state.togglePositioning(true);
   }
 
   void _openSettings() {
@@ -63,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .push(MaterialPageRoute(builder: (_) => const SettingsScreen()))
         .then((_) {
       state.closeSettings();
+      state.reapplyFullscreen();
       // Restart scan if needed
       if (state.activationMode == ActivationMode.scan) {
         state.startScan();
@@ -78,8 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           // ── Atmospheric background ───────────────────────────────
-          const Positioned.fill(
-            child: IgnorePointer(child: _AppBackground()),
+          Positioned.fill(
+            child: IgnorePointer(child: _AppBackground(baseColor: state.backgroundColor)),
           ),
 
           // ── Main canvas with buttons ──────────────────────────────
@@ -99,19 +243,27 @@ class _HomeScreenState extends State<HomeScreen> {
           // ── Output bar ────────────────────────────────────────────
           OutputBar(
             text: state.outputBarText,
+            isPlaying: state.isSpeaking,
             position: state.outputBarPos,
             scale: state.outputBarScale,
           ),
 
           // ── Positioning overlay ───────────────────────────────────
-          if (state.isPositioningMode) _buildPositioningOverlay(state),
+          if (state.isPositioningMode) _buildPositioningOverlay(state, _isLight(state.backgroundColor)),
 
-          // ── Settings gear (top-right) ─────────────────────────────
+          // ── Settings gear + Move button (top-right) ───────────────────────
           if (!state.isPositioningMode)
             Positioned(
               top: MediaQuery.of(context).padding.top + 12,
               right: 16,
-              child: _buildGearButton(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildMoveButton(state, _isLight(state.backgroundColor)),
+                  const SizedBox(width: 10),
+                  _buildGearButton(state, _isLight(state.backgroundColor)),
+                ],
+              ),
             ),
         ],
       ),
@@ -128,7 +280,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final h = constraints.maxHeight;
 
         return Stack(
-          children: state.buttons.map((btn) {
+          children: [
+            ...state.buttons.map((btn) {
             final left = w * btn.position.dx / 100;
             final top = h * btn.position.dy / 100;
             final btnSize = 200.0 * btn.scale;
@@ -183,11 +336,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Text(
                           btn.label.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.5,
-                            color: Colors.white,
+                            color: _isLight(state.backgroundColor) ? Colors.black87 : Colors.white,
                           ),
                         ),
                       ),
@@ -251,6 +404,48 @@ class _HomeScreenState extends State<HomeScreen> {
               child: child,
             );
           }).toList(),
+            // Colour-picker swatches overlaid on each button in positioning mode
+          if (state.isPositioningMode)
+            ...state.buttons.map((btn) {
+              final left = w * btn.position.dx / 100;
+              final top = h * btn.position.dy / 100;
+              final btnSize = 200.0 * btn.scale;
+              final swatchSize = (btnSize * 0.22).clamp(24.0, 36.0);
+              return Positioned(
+                left: left + btnSize * 0.28,
+                top: top + btnSize * 0.28,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showPositioningColorPicker(state, btn),
+                  child: Container(
+                    width: swatchSize,
+                    height: swatchSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: btn.color.gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Colors.white, width: 2.0),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.palette_outlined,
+                      size: swatchSize * 0.5,
+                      color: btn.color.textColor,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
         );
       },
     );
@@ -291,14 +486,72 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ────────────────────────────────────────────────────────────────
-  // GEAR BUTTON — hold 3 seconds to open settings
+  // GEAR BUTTON — settings access
   // ────────────────────────────────────────────────────────────────
-  Widget _buildGearButton() {
-    return GestureDetector(
-      onLongPressStart: (_) => _startHold(),
-      onLongPressEnd: (_) => _endHold(),
-      onLongPressCancel: () => _endHold(),
-      onTap: () {}, // block accidental tap
+  Widget _buildGearButton(AppState state, bool isLight) {
+    return _buildGuardButton(
+      state: state,
+      isLight: isLight,
+      icon: Icons.settings_outlined,
+      holdProgress: _settingsHoldProgress,
+      tapCount: _settingsTapCount,
+      onHoldStart: () => _settingsHoldStart(state),
+      onHoldEnd: _settingsHoldEnd,
+      onTap: () => _settingsTap(state),
+      onTapOff: _openSettings,
+      onHint: () => _showGuardHint(state),
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // MOVE BUTTON — quick access to positioning mode
+  // ────────────────────────────────────────────────────────────────
+  Widget _buildMoveButton(AppState state, bool isLight) {
+    return _buildGuardButton(
+      state: state,
+      isLight: isLight,
+      icon: Icons.open_with,
+      holdProgress: _moveHoldProgress,
+      tapCount: _moveTapCount,
+      onHoldStart: () => _moveHoldStart(state),
+      onHoldEnd: _moveHoldEnd,
+      onTap: () => _moveTap(state),
+      onTapOff: _openMoveMode,
+      onHint: () => _showGuardHint(state),
+    );
+  }
+
+  // Shared guard button shell used by both gear and move buttons
+  Widget _buildGuardButton({
+    required AppState state,
+    required bool isLight,
+    required IconData icon,
+    required double holdProgress,
+    required int tapCount,
+    required VoidCallback onHoldStart,
+    required VoidCallback onHoldEnd,
+    required VoidCallback onTap,
+    required VoidCallback onTapOff,
+    required VoidCallback onHint,
+  }) {
+    final baseInk = isLight ? Colors.black : Colors.white;
+    final bgAlpha = holdProgress > 0 ? 0.18 : 0.10;
+    final borderAlpha = holdProgress > 0 ? 0.32 : 0.16;
+    final isHolding = holdProgress > 0;
+    final iconColor = isHolding
+        ? const Color(0xFF818CF8)
+        : baseInk.withValues(alpha: isLight ? 0.60 : 0.55);
+
+    final isTapsMode = state.guardMode == GuardMode.taps;
+    final isOffMode = state.guardMode == GuardMode.off;
+    final remaining = isTapsMode ? state.guardTapCount - tapCount : 0;
+
+    Widget btn = GestureDetector(
+      onLongPressStart: state.guardMode == GuardMode.hold ? (_) => onHoldStart() : null,
+      onLongPressEnd: state.guardMode == GuardMode.hold ? (_) => onHoldEnd() : null,
+      onLongPressCancel: state.guardMode == GuardMode.hold ? onHoldEnd : null,
+      onTapDown: isOffMode ? (_) => onTapOff() : null,
+      onTap: isOffMode ? null : (isTapsMode ? onTap : onHint),
       child: SizedBox(
         width: 64,
         height: 64,
@@ -308,41 +561,42 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.white.withValues(
-                        alpha: _holdProgress > 0 ? 0.16 : 0.09),
-                    Colors.white.withValues(
-                        alpha: _holdProgress > 0 ? 0.07 : 0.03),
-                  ],
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(
-                      alpha: _holdProgress > 0 ? 0.30 : 0.14),
-                ),
+                color: baseInk.withValues(alpha: bgAlpha),
+                border: Border.all(color: baseInk.withValues(alpha: borderAlpha)),
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Progress ring
-                  SizedBox(
-                    width: 54,
-                    height: 54,
-                    child: CircularProgressIndicator(
-                      value: _holdProgress,
-                      strokeWidth: 3.0,
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF818CF8)),
+                  if (state.guardMode == GuardMode.hold)
+                    SizedBox(
+                      width: 54,
+                      height: 54,
+                      child: CircularProgressIndicator(
+                        value: holdProgress,
+                        strokeWidth: 3.0,
+                        backgroundColor: baseInk.withValues(alpha: 0.08),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF818CF8)),
+                      ),
                     ),
-                  ),
-                  Icon(
-                    Icons.settings_outlined,
-                    size: 28,
-                    color: _holdProgress > 0
-                        ? const Color(0xFFA5B4FC)
-                        : Colors.white.withValues(alpha: 0.50),
-                  ),
+                  Icon(icon, size: 28, color: iconColor),
+                  // tap counter badge
+                  if (isTapsMode && tapCount > 0)
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Container(
+                        width: 16, height: 16,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF818CF8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$remaining',
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -350,18 +604,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+    return btn;
   }
 
   // ────────────────────────────────────────────────────────────────
   // POSITIONING OVERLAY
   // ────────────────────────────────────────────────────────────────
-  Widget _buildPositioningOverlay(AppState state) {
+  Widget _buildPositioningOverlay(AppState state, bool isLight) {
     return Stack(
       children: [
         // Grid background
         Positioned.fill(
           child: IgnorePointer(
-            child: CustomPaint(painter: _GridPainter()),
+            child: CustomPaint(painter: _GridPainter(isLight: isLight)),
           ),
         ),
 
@@ -408,25 +663,36 @@ class _HomeScreenState extends State<HomeScreen> {
         // Bottom controls
         Positioned(
           bottom: MediaQuery.of(context).padding.bottom + 24,
-          left: 0,
-          right: 0,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          left: 16,
+          right: 16,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
             children: [
+              if (state.buttons.length < 4)
+                _posButton(
+                  icon: Icons.add_circle_outline,
+                  label: 'Add Switch',
+                  color: const Color(0xFF818CF8),
+                  isLight: isLight,
+                  onTap: () => state.addButton(),
+                ),
               _posButton(
                 icon: Icons.grid_3x3,
                 label: 'Auto Arrange',
                 color: const Color(0xFF10B981),
+                isLight: isLight,
                 onTap: () {
                   final size = MediaQuery.of(context).size;
                   state.arrangeGrid(size);
                 },
               ),
-              const SizedBox(width: 16),
               _posButton(
                 icon: Icons.rotate_left,
                 label: 'Reset',
-                color: Colors.white,
+                color: isLight ? Colors.black87 : Colors.white,
+                isLight: isLight,
                 onTap: () {
                   for (int i = 0; i < state.buttons.length; i++) {
                     state.buttons[i].position =
@@ -437,7 +703,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   state.notify();
                 },
               ),
-              const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () => state.togglePositioning(false),
                 icon: const Icon(Icons.lock, size: 24),
@@ -461,30 +726,152 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ────────────────────────────────────────────────────────────────
+  // POSITIONING COLOUR PICKER
+  // ────────────────────────────────────────────────────────────────
+  void _showPositioningColorPicker(AppState state, AppButton btn) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Text(
+              'Switch Colour',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 8,
+              shrinkWrap: true,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              physics: const NeverScrollableScrollPhysics(),
+              children: kColors.map((c) {
+                final active = btn.color.name == c.name;
+                return GestureDetector(
+                  onTap: () {
+                    state.updateButton(btn.id, (b) => b.color = c);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: c.gradient,
+                      ),
+                      boxShadow: active
+                          ? [
+                              const BoxShadow(
+                                  color: Colors.white,
+                                  spreadRadius: 3,
+                                  blurRadius: 0),
+                              BoxShadow(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  spreadRadius: 5,
+                                  blurRadius: 0),
+                            ]
+                          : null,
+                    ),
+                    child: active
+                        ? const Center(
+                            child: Icon(Icons.check,
+                                color: Colors.white, size: 16))
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+            if (state.buttons.length > 1) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    state.deleteButton(btn.id);
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  label: const Text(
+                    'Delete Switch',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFF87171),
+                    side: BorderSide(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _posButton({
     required IconData icon,
     required String label,
     required Color color,
+    required bool isLight,
     required VoidCallback onTap,
   }) {
+    final fg = isLight ? Colors.black87 : Colors.white;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
+          color: isLight
+              ? Colors.black.withValues(alpha: 0.08)
+              : color.withValues(alpha: 0.12),
+          border: Border.all(
+              color: isLight
+                  ? Colors.black.withValues(alpha: 0.25)
+                  : color.withValues(alpha: 0.35)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 24, color: Colors.white),
+            Icon(icon, size: 24, color: fg),
             const SizedBox(width: 10),
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+                    color: fg, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -494,65 +881,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
 /// Atmospheric background: deep base with two refined radial glows.
 class _AppBackground extends StatelessWidget {
-  const _AppBackground();
+  const _AppBackground({required this.baseColor});
+  final Color baseColor;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Deep base
-        const ColoredBox(color: Color(0xFF07070E)),
-        // Central indigo lift — keeps the canvas from feeling flat
-        Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0, -0.3),
-              radius: 1.15,
-              colors: [Color(0x256366F1), Color(0x006366F1)],
-              stops: [0.0, 1.0],
-            ),
-          ),
-        ),
-        // Violet warmth — bottom-left corner
-        Container(
-          decoration: const BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(-1.1, 1.05),
-              radius: 0.85,
-              colors: [Color(0x177C3AED), Color(0x007C3AED)],
-            ),
-          ),
-        ),
-        // Edge vignette
-        Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.2,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.42),
-              ],
-              stops: const [0.5, 1.0],
-            ),
-          ),
-        ),
-      ],
-    );
+    return ColoredBox(color: baseColor);
   }
 }
 
 /// Subtle dot grid for positioning mode.
 class _GridPainter extends CustomPainter {
+  const _GridPainter({this.isLight = false});
+  final bool isLight;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = (isLight ? Colors.black : Colors.white).withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
 
-    const spacing = 36.0;
-    const radius = 1.2;
+    const spacing = 40.0;
+    const radius = 1.3;
     for (double x = spacing; x < size.width; x += spacing) {
       for (double y = spacing; y < size.height; y += spacing) {
         canvas.drawCircle(Offset(x, y), radius, paint);
@@ -561,5 +911,5 @@ class _GridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _GridPainter old) => old.isLight != isLight;
 }

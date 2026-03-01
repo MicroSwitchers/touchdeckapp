@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,9 @@ import 'app_state_io.dart' if (dart.library.html) 'app_state_web.dart' as platfo
 
 import '../constants.dart';
 import '../models/app_button.dart';
+
+// ── Guard mode enum ──────────────────────────────────────────────────────
+enum GuardMode { hold, taps, off }
 
 class AppState extends ChangeNotifier {
   /// Public notify helper so UI code can trigger rebuilds.
@@ -38,12 +42,26 @@ class AppState extends ChangeNotifier {
   bool scanTick = false;
   bool scanAnnounce = false;
   bool scanClearDebounce = false;
+  String bgColorName = 'Very Dark'; // background colour choice
+
+  // ── Menu access guard ─────────────────────────────────────────────
+  GuardMode guardMode = GuardMode.hold;
+  double guardHoldSeconds = 3.0;
+  int guardTapCount = 3;
+
+  // ── Display ──────────────────────────────────────────────────────
+  bool isFullscreen = false;
 
   // ── Positioning ──────────────────────────────────────────────────
   bool isPositioningMode = false;
   Offset outputBarPos = const Offset(50, 92);
   double outputBarScale = 1.0;
   bool showOutputBarInPositioning = true;
+
+  /// Resolved background colour from the user's chosen preset.
+  Color get backgroundColor => kBgColors
+      .firstWhere((b) => b.name == bgColorName, orElse: () => kBgColors[1])
+      .color;
 
   // ── Runtime state (not persisted) ────────────────────────────────
   bool showSettings = false;
@@ -87,11 +105,13 @@ class AppState extends ChangeNotifier {
   // ── Prefs ────────────────────────────────────────────────────────
   SharedPreferences? _prefs;
 
+  AppState([SharedPreferences? prefs]) : _prefs = prefs;
+
   // ────────────────────────────────────────────────────────────────
   // INIT
   // ────────────────────────────────────────────────────────────────
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+    _prefs ??= await SharedPreferences.getInstance();
 
     // Create recorder only on non-web platforms
     if (platform.hasRecording) {
@@ -223,6 +243,15 @@ class AppState extends ChangeNotifier {
     }
     outputBarScale = p.getDouble('outputBarScale') ?? 1.0;
     showOutputBarInPositioning = p.getBool('showOutputBarInPositioning') ?? true;
+    bgColorName = p.getString('bgColorName') ?? 'Very Dark';
+    guardMode = GuardMode.values.firstWhere(
+      (m) => m.name == (p.getString('guardMode') ?? 'hold'),
+      orElse: () => GuardMode.hold,
+    );
+    guardHoldSeconds = p.getDouble('guardHoldSeconds') ?? 3.0;
+    guardTapCount = p.getInt('guardTapCount') ?? 3;
+    isFullscreen = p.getBool('isFullscreen') ?? false;
+    _applyFullscreen();
 
     editingBtnId = p.getString('editingBtnId');
     if (editingBtnId != null && !buttons.any((b) => b.id == editingBtnId)) {
@@ -236,7 +265,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> saveState() async {
-    final p = _prefs!;
+    final p = _prefs;
+    if (p == null) return; // guard: init not yet complete
     await p.setString('buttons', AppButton.encodeList(buttons));
     await p.setString('activationMode', activationMode.name);
     await p.setString('labelPos', labelPos.name);
@@ -257,6 +287,11 @@ class AppState extends ChangeNotifier {
     );
     await p.setDouble('outputBarScale', outputBarScale);
     await p.setBool('showOutputBarInPositioning', showOutputBarInPositioning);
+    await p.setString('bgColorName', bgColorName);
+    await p.setString('guardMode', guardMode.name);
+    await p.setDouble('guardHoldSeconds', guardHoldSeconds);
+    await p.setInt('guardTapCount', guardTapCount);
+    await p.setBool('isFullscreen', isFullscreen);
     if (editingBtnId != null) {
       await p.setString('editingBtnId', editingBtnId!);
     }
@@ -265,6 +300,8 @@ class AppState extends ChangeNotifier {
   AppButton _defaultButton([String? id]) => AppButton(
         id: id ?? const Uuid().v4(),
         color: kColors[0],
+        scale: 1.2,
+        position: const Offset(50, 50),
       );
 
   // ────────────────────────────────────────────────────────────────
@@ -309,10 +346,41 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setBgColor(String name) {
+    bgColorName = name;
+    saveState();
+    notifyListeners();
+  }
+
   void updateButton(String id, void Function(AppButton) updater) {
     final idx = buttons.indexWhere((b) => b.id == id);
     if (idx == -1) return;
     updater(buttons[idx]);
+    saveState();
+    notifyListeners();
+  }
+
+  void addPhrase(String id) {
+    final idx = buttons.indexWhere((b) => b.id == id);
+    if (idx == -1) return;
+    final btn = buttons[idx];
+    if (btn.phrases.length >= 10) return;
+    btn.phrases.add('');
+    btn.hasAudio.add(false);
+    saveState();
+    notifyListeners();
+  }
+
+  void removePhrase(String id, int phraseIdx) {
+    final idx = buttons.indexWhere((b) => b.id == id);
+    if (idx == -1) return;
+    final btn = buttons[idx];
+    if (btn.phrases.length <= 1) return;
+    btn.phrases.removeAt(phraseIdx);
+    if (phraseIdx < btn.hasAudio.length) btn.hasAudio.removeAt(phraseIdx);
+    if (btn.phraseIndex >= btn.phrases.length) {
+      btn.phraseIndex = btn.phrases.length - 1;
+    }
     saveState();
     notifyListeners();
   }
@@ -361,12 +429,17 @@ class AppState extends ChangeNotifier {
 
     final idx = btn.phraseIndex;
     final phraseText = (btn.phrases[idx]).trim();
-    final displayText = phraseText.isNotEmpty ? phraseText : btn.label;
     final hasAudio = idx < btn.hasAudio.length && btn.hasAudio[idx];
 
-    // Show output bar
-    final caption = displayText.isNotEmpty ? displayText : (hasAudio ? '🔊' : '');
-    if (caption.isNotEmpty) showOutputBar(caption);
+    // Show output bar — phrase caption only (never the button label/title);
+    // for audio-only buttons clear any lingering text so the waveform shows.
+    if (phraseText.isNotEmpty) {
+      showOutputBar(phraseText);
+    } else if (hasAudio) {
+      outputBarText = null;
+      _outputBarTimer?.cancel();
+      notifyListeners();
+    }
 
     // Play audio or TTS
     if (hasAudio) {
@@ -377,17 +450,17 @@ class AppState extends ChangeNotifier {
 
     // Phrase cycling
     final validSlots = <int>[];
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < btn.phrases.length; i++) {
       if (btn.phrases[i].trim().isNotEmpty ||
           (i < btn.hasAudio.length && btn.hasAudio[i])) {
         validSlots.add(i);
       }
     }
     if (validSlots.length > 1) {
-      int next = (idx + 1) % 3;
+      int next = (idx + 1) % btn.phrases.length;
       int safety = 0;
-      while (!validSlots.contains(next) && safety++ < 5) {
-        next = (next + 1) % 3;
+      while (!validSlots.contains(next) && safety++ < btn.phrases.length) {
+        next = (next + 1) % btn.phrases.length;
       }
       btn.phraseIndex = next;
       saveState();
@@ -618,8 +691,19 @@ class AppState extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────
   // OUTPUT BAR
   // ────────────────────────────────────────────────────────────────
+  // Strips control characters and invisible Unicode that render as box-with-X.
+  // Covers: C0/C1 controls, soft hyphen (U+00AD), zero-width chars, BOM,
+  // replacement character (U+FFFD), and other non-characters (U+FFFE/FFFF).
+  static final _badChars = RegExp(
+    r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F'
+    r'\u00AD'
+    r'\u200B\u200C\u200D\u2028\u2029'
+    r'\uFEFF\uFFFD\uFFFE\uFFFF]',
+  );
+
   void showOutputBar(String text) {
-    outputBarText = text;
+    final clean = text.replaceAll(_badChars, '').trim();
+    outputBarText = clean.isEmpty ? null : clean;
     _outputBarTimer?.cancel();
     _outputBarTimer = Timer(const Duration(seconds: 6), () {
       outputBarText = null;
@@ -687,25 +771,25 @@ class AppState extends ChangeNotifier {
 
     if (n == 1) {
       positions = [const Offset(50, 50)];
-      scale = 1.0;
+      scale = 1.2;
     } else if (n == 2) {
       positions = isLandscape
-          ? [const Offset(26, 50), const Offset(74, 50)]
-          : [const Offset(50, 28), const Offset(50, 72)];
-      scale = 0.9;
+          ? [const Offset(25, 50), const Offset(75, 50)]
+          : [const Offset(50, 27), const Offset(50, 73)];
+      scale = 1.0;
     } else if (n == 3) {
       positions = isLandscape
           ? [const Offset(17, 50), const Offset(50, 50), const Offset(83, 50)]
-          : [const Offset(30, 26), const Offset(70, 26), const Offset(50, 74)];
-      scale = isLandscape ? 0.70 : 0.82;
+          : [const Offset(30, 25), const Offset(70, 25), const Offset(50, 72)];
+      scale = isLandscape ? 0.82 : 0.90;
     } else {
       positions = [
-        const Offset(27, 26),
-        const Offset(73, 26),
-        const Offset(27, 74),
-        const Offset(73, 74),
+        const Offset(26, 25),
+        const Offset(74, 25),
+        const Offset(26, 75),
+        const Offset(74, 75),
       ];
-      scale = 0.78;
+      scale = 0.85;
     }
 
     for (int i = 0; i < positions.length && i < buttons.length; i++) {
@@ -749,6 +833,32 @@ class AppState extends ChangeNotifier {
 
   ScanColorDef get currentScanColor =>
       kScanColors.firstWhere((c) => c.name == scanColor, orElse: () => kScanColors[0]);
+
+  // ────────────────────────────────────────────────────────────────
+  // FULLSCREEN
+  // ────────────────────────────────────────────────────────────────
+  void _applyFullscreen() {
+    SystemChrome.setEnabledSystemUIMode(
+      isFullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+    );
+  }
+
+  void setFullscreen(bool v) {
+    isFullscreen = v;
+    _applyFullscreen();
+    saveState();
+    notifyListeners();
+  }
+
+  /// Re-applies the current fullscreen setting — call after navigating back
+  /// from any overlay that may have reset the system UI mode.
+  void reapplyFullscreen() => _applyFullscreen();
+
+  // ── TTS preview (settings UI) ────────────────────────────────────
+  void previewPhraseText(String text) {
+    if (text.trim().isEmpty) return;
+    _speakTts(text.trim(), '__preview__');
+  }
 
   @override
   void dispose() {

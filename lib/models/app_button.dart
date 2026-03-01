@@ -22,8 +22,8 @@ class AppButton {
     Offset? position,
     this.scale = 1.0,
     this.phraseIndex = 0,
-  })  : phrases = phrases ?? ['', '', ''],
-        hasAudio = hasAudio ?? [false, false, false],
+  })  : phrases = phrases ?? [''],
+        hasAudio = hasAudio ?? [false],
         color = color ?? kColors[0],
         position = position ?? const Offset(50, 50);
 

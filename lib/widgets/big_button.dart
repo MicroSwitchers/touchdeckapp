@@ -68,7 +68,7 @@ class _BigButtonState extends State<BigButton>
     final c = widget.data.color;
     final pressed = widget.isPressed;
       final size = 290.0 * widget.data.scale;
-    final depth = (10.0 * widget.data.scale).clamp(8.0, 14.0);
+    final depth = (22.0 * widget.data.scale).clamp(18.0, 30.0); // taller 3D slab
 
     // Face sits at top:0, slab peeks out below
     return FadeTransition(
@@ -109,30 +109,33 @@ class _BigButtonState extends State<BigButton>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.50),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                          spreadRadius: -2,
+                          color: Colors.black.withValues(alpha: 0.60),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                          spreadRadius: -4,
                         ),
-                        // Coloured ambient shadow
+                        // Soft colored drop shadow — visible depth, no glare
                         if (!pressed)
                           BoxShadow(
-                            color: c.primary.withValues(alpha: 0.22),
-                            blurRadius: 28,
-                            offset: const Offset(0, 12),
+                            color: c.primary.withValues(alpha: 0.28),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                             spreadRadius: -4,
                           ),
+                        // Press / activation glow
+                        if (pressed && !widget.isSpeaking) ...[
+                          BoxShadow(
+                            color: c.glowColor,
+                            blurRadius: 28,
+                            spreadRadius: 4,
+                          ),
+                        ],
                         // Speaking glow
                         if (widget.isSpeaking) ...[
                           BoxShadow(
                             color: c.glowColor,
-                            blurRadius: 40,
+                            blurRadius: 32,
                             spreadRadius: 6,
-                          ),
-                          BoxShadow(
-                            color: c.primary.withValues(alpha: 0.18),
-                            blurRadius: 80,
-                            spreadRadius: 8,
                           ),
                         ],
                         // Scan ring
@@ -141,12 +144,12 @@ class _BigButtonState extends State<BigButton>
                           BoxShadow(
                             color: widget.scanColorDef!.ring,
                             blurRadius: 0,
-                            spreadRadius: 6,
+                            spreadRadius: 8,
                           ),
                           BoxShadow(
                             color: widget.scanColorDef!.glow,
-                            blurRadius: 32,
-                            spreadRadius: 4,
+                            blurRadius: 48,
+                            spreadRadius: 6,
                           ),
                         ],
                       ],
@@ -154,7 +157,7 @@ class _BigButtonState extends State<BigButton>
                   ),
                 ),
 
-                // ── Face tile — sits at the top ─────────────────────
+                // ── Face tile — matte, high-contrast, no glare ──────
                 Positioned(
                   left: 0,
                   right: 0,
@@ -164,67 +167,69 @@ class _BigButtonState extends State<BigButton>
                     height: size,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.3, -0.5),
-                        radius: 1.2,
-                        colors: [
-                          Color.lerp(c.light, Colors.white, 0.25)!,
-                          c.primary,
-                          Color.lerp(c.dark, Colors.black, 0.3)!,
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        width: 1.0,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Top-edge bevel — simulates light hitting the rim ─
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      // Gentle matte gradient: slightly lighter at top, slightly
+                      // darker at bottom — gives clear 3D depth without glare.
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
-                        end: Alignment.center,
+                        end: Alignment.bottomCenter,
                         colors: [
-                          Colors.white.withValues(alpha: pressed ? 0.08 : 0.35),
-                          Colors.transparent,
+                          Color.lerp(c.primary, Colors.white, pressed ? 0.0 : 0.12)!,
+                          c.primary,
+                          Color.lerp(c.primary, Colors.black, 0.22)!,
                         ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                      // Colored border using the button's own dark shade — no white glare
+                      border: Border.all(
+                        color: Color.lerp(c.dark, Colors.black, 0.25)!,
+                        width: 3.0,
                       ),
                     ),
                   ),
                 ),
 
-                // ── Bottom-edge inner shadow ────────────
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.center,
-                        colors: [
-                          Colors.black.withValues(alpha: pressed ? 0.45 : 0.25),
-                          Colors.transparent,
-                        ],
+                // ── Pressed inner shadow (depth cue when tapped) ─────
+                if (pressed)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.30),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.5],
+                        ),
                       ),
                     ),
                   ),
-                ),
+
+                // ── Pressed / activated glow border ─────────────────
+                if (pressed && !widget.isSpeaking)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: c.glowColor,
+                          width: 5.0,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // ── Speaking border ──────────────────────────────────
                 if (widget.isSpeaking)
@@ -239,7 +244,7 @@ class _BigButtonState extends State<BigButton>
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: c.glowColor,
-                          width: 3.0,
+                          width: 6.0, // thicker ring — clearly visible for low vision
                         ),
                       ),
                     ),
@@ -291,20 +296,21 @@ class _BigButtonState extends State<BigButton>
                             style: TextStyle(
                               fontSize:
                                   24.0 * widget.data.scale.clamp(0.6, 1.5),
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.3,
-                              height: 1.2,
-                              color: c.textColor,
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                  color: (c.textColor == Colors.black
-                                          ? Colors.white
-                                          : Colors.black)
-                                      .withValues(alpha: 0.45),
-                                ),
-                              ],
+                                fontWeight: FontWeight.w900, // Extra bold for punchiness
+                                letterSpacing: 0.5,
+                                height: 1.1,
+                                color: c.textColor,
+                                shadows: [
+                                  // Single clear shadow for maximum readability
+                                  Shadow(
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                    color: (c.textColor == Colors.black
+                                            ? Colors.white
+                                            : Colors.black)
+                                        .withValues(alpha: 0.55),
+                                  ),
+                                ],
                             ),
                           ),
                         ),

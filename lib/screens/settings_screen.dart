@@ -295,6 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     return Column(
+      key: ValueKey(btn.id),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Label & Touch Target
@@ -312,7 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Tap the entire screen, or just the button.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6)),
         ),
         const SizedBox(height: 12),
         Row(
@@ -350,13 +351,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // Phrases & Audio
         _sectionLabel('Phrases & Audio', Icons.chat_bubble_outline, const Color(0xFF818CF8)),
-        const SizedBox(height: 8),
-        Text(
-          'Add up to 3 phrases to cycle through on each tap. Recording audio overrides the robot voice.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.04),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.record_voice_over_outlined, size: 16,
+                    color: const Color(0xFF818CF8).withValues(alpha: 0.8)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Type text to have it read aloud by the robot voice when this switch is activated.',
+                    style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.65), height: 1.45),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.mic_outlined, size: 16,
+                    color: const Color(0xFF34D399).withValues(alpha: 0.8)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Or tap the mic to record your own audio. Text is optional — add it for closed captions.',
+                    style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.65), height: 1.45),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 6),
+              Text(
+                'Up to 10 phrases per switch — each tap cycles to the next.',
+                style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.35), height: 1.4),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
-        ...List.generate(3, (idx) => _phraseRow(state, btn, idx)),
+        ...List.generate(btn.phrases.length, (idx) => _phraseRow(state, btn, idx)),
+        if (btn.phrases.length < 10)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: GestureDetector(
+              onTap: () => state.addPhrase(btn.id),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add, size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Add phrase',
+                      style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: 20),
 
         // Size slider
@@ -408,6 +472,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+
+        // Audio storage info
+        const SizedBox(height: 24),
+        FutureBuilder<int>(
+          future: state.getStorageSize(),
+          builder: (context, snap) {
+            final sizeStr = snap.hasData ? state.formatBytes(snap.data!) : '…';
+            return Text(
+              'Recordings are using $sizeStr of storage. Go to the System tab to free up space.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.3),
+                height: 1.5,
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -458,74 +539,159 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _phraseRow(AppState state, AppButton btn, int idx) {
     final hasAudio = idx < btn.hasAudio.length && btn.hasAudio[idx];
+    final phraseText = btn.phrases[idx].trim();
+    final hasTts = !hasAudio && phraseText.isNotEmpty;
+    final isEmpty = !hasAudio && phraseText.isEmpty;
     final isThisRecording = state.isRecording &&
         state.currentRecordingBtnId == btn.id &&
         state.currentRecordingIdx == idx;
     final isOtherRecording = state.isRecording && !isThisRecording;
 
+    // Mode badge colours
+    final Color badgeBg = hasAudio
+        ? const Color(0xFF10B981).withValues(alpha: 0.15)
+        : hasTts
+            ? const Color(0xFF6366F1).withValues(alpha: 0.15)
+            : Colors.white.withValues(alpha: 0.04);
+    final Color badgeBorder = hasAudio
+        ? const Color(0xFF34D399).withValues(alpha: 0.5)
+        : hasTts
+            ? const Color(0xFF818CF8).withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.1);
+    final Color badgeText = hasAudio
+        ? const Color(0xFF6EE7B7)
+        : hasTts
+            ? const Color(0xFFA5B4FC)
+            : Colors.white.withValues(alpha: 0.25);
+    final String badgeLabel = hasAudio ? 'AUDIO' : hasTts ? 'TTS' : 'EMPTY';
+    final IconData badgeIcon = hasAudio
+        ? Icons.mic
+        : hasTts
+            ? Icons.record_voice_over
+            : Icons.remove_circle_outline;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Index badge
-          Container(
-            width: 24,
-            alignment: Alignment.center,
-            child: Text(
-              '${idx + 1}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF818CF8).withValues(alpha: 0.6),
+          Row(
+            children: [
+              // Index badge
+              Container(
+                width: 24,
+                alignment: Alignment.center,
+                child: Text(
+                  '${idx + 1}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF818CF8).withValues(alpha: 0.6),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              // Mode chip
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  border: Border.all(color: badgeBorder),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(badgeIcon, size: 11, color: badgeText),
+                    const SizedBox(width: 4),
+                    Text(
+                      badgeLabel,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: badgeText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // Text input
-          Expanded(
-            child: _textField(
-              value: btn.phrases[idx],
-              placeholder: 'Phrase',
-              onChanged: (v) =>
-                  state.updateButton(btn.id, (b) => b.phrases[idx] = v),
-            ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const SizedBox(width: 32), // align with text above
+              // Text input
+              Expanded(
+                child: _textField(
+                  value: btn.phrases[idx],
+                  placeholder: 'Phrase (optional with audio)',
+                  onChanged: (v) =>
+                      state.updateButton(btn.id, (b) => b.phrases[idx] = v),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Action buttons
+              if (hasAudio) ...[
+                _iconButton(
+                  icon: Icons.play_arrow,
+                  color: const Color(0xFF6EE7B7),
+                  bgColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                  borderColor: const Color(0xFF34D399).withValues(alpha: 0.4),
+                  onTap: () => state.playPreview(btn.id, idx),
+                ),
+                const SizedBox(width: 4),
+                _iconButton(
+                  icon: Icons.delete_outline,
+                  color: const Color(0xFFF87171),
+                  bgColor: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                  borderColor: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                  onTap: () => state.deleteRecording(btn.id, idx),
+                ),
+              ] else ...[
+                // TTS preview (only when text is present)
+                if (hasTts) ...[
+                  _iconButton(
+                    icon: Icons.record_voice_over,
+                    color: const Color(0xFFA5B4FC),
+                    bgColor: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderColor: const Color(0xFF818CF8).withValues(alpha: 0.4),
+                    onTap: () => state.previewPhraseText(phraseText),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (state.canRecord)
+                  _iconButton(
+                    icon: isThisRecording ? Icons.stop : Icons.mic,
+                    color: isThisRecording
+                        ? Colors.white
+                        : isOtherRecording
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.white.withValues(alpha: 0.4),
+                    bgColor: isThisRecording
+                        ? const Color(0xFFDC2626)
+                        : Colors.white.withValues(alpha: 0.05),
+                    borderColor: Colors.white.withValues(alpha: 0.1),
+                    onTap: () {
+                      if (!isOtherRecording) {
+                        state.toggleRecording(btn.id, idx);
+                      }
+                    },
+                  ),
+              ],
+              if (btn.phrases.length > 1) ...[
+                const SizedBox(width: 4),
+                _iconButton(
+                  icon: Icons.close,
+                  color: Colors.white.withValues(alpha: 0.45),
+                  bgColor: Colors.white.withValues(alpha: 0.04),
+                  borderColor: Colors.white.withValues(alpha: 0.1),
+                  onTap: () => state.removePhrase(btn.id, idx),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(width: 8),
-          // Record / Play / Delete
-          if (hasAudio) ...[
-            _iconButton(
-              icon: Icons.play_arrow,
-              color: const Color(0xFF6EE7B7),
-              bgColor: const Color(0xFF10B981).withValues(alpha: 0.15),
-              borderColor: const Color(0xFF34D399).withValues(alpha: 0.4),
-              onTap: () => state.playPreview(btn.id, idx),
-            ),
-            const SizedBox(width: 4),
-            _iconButton(
-              icon: Icons.delete_outline,
-              color: const Color(0xFFF87171),
-              bgColor: const Color(0xFFEF4444).withValues(alpha: 0.1),
-              borderColor: const Color(0xFFEF4444).withValues(alpha: 0.25),
-              onTap: () => state.deleteRecording(btn.id, idx),
-            ),
-          ] else if (state.canRecord)
-            _iconButton(
-              icon: isThisRecording ? Icons.stop : Icons.mic,
-              color: isThisRecording 
-                  ? Colors.white 
-                  : isOtherRecording 
-                      ? Colors.white.withValues(alpha: 0.1) 
-                      : Colors.white.withValues(alpha: 0.4),
-              bgColor: isThisRecording
-                  ? const Color(0xFFDC2626)
-                  : Colors.white.withValues(alpha: 0.05),
-              borderColor: Colors.white.withValues(alpha: 0.1),
-              onTap: () {
-                if (!isOtherRecording) {
-                  state.toggleRecording(btn.id, idx);
-                }
-              },
-            ),
         ],
       ),
     );
@@ -575,12 +741,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Fullscreen ──────────────────────────────────────────
+        _sectionLabel('Display', Icons.fullscreen, const Color(0xFF64B5F6)),
+        const SizedBox(height: 8),
+        Text(
+          'Hide the system status and navigation bars for more screen space.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        _toggleRow(
+          label: 'Fullscreen',
+          subtitle: 'Hides system bars — swipe from edge to temporarily restore',
+          value: state.isFullscreen,
+          onTap: () => state.setFullscreen(!state.isFullscreen),
+        ),
+        const SizedBox(height: 24),
+
         // Activation Mode
         _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
         const SizedBox(height: 8),
         Text(
           '"Release" helps users who drag their finger.${state.buttons.length > 1 ? ' "Scan" highlights buttons one by one for switch users.' : ''}',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         Row(
@@ -675,12 +857,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         const SizedBox(height: 24),
 
+        // Background Colour
+        _sectionLabel('Background Colour', Icons.palette_outlined, const Color(0xFF94A3B8)),
+        const SizedBox(height: 8),
+        Text(
+          'Choose a background colour for the app.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        _buildBgColorPicker(state),
+        const SizedBox(height: 24),
+
         // Tap Feedback
         _sectionLabel('Tap Feedback', Icons.notifications, const Color(0xFFFBBF24)),
         const SizedBox(height: 8),
         Text(
           'Get confirmation when you tap a button.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         Row(
@@ -716,7 +909,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Prevents accidental double-taps by ignoring extra touches for a short time.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         _sliderCard(
@@ -740,7 +933,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Boosts the volume of your microphone recordings.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         _sliderCard(
@@ -763,7 +956,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Adjust the volume, speaking speed, and choose a TTS voice.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         _sliderCard(
@@ -798,7 +991,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Where the button label appears.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         Row(
@@ -841,7 +1034,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         Text(
           'Enter positioning mode to arrange your buttons.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -867,6 +1060,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 24),
+
+        // Menu Access Guard
+        _sectionLabel('Menu Access Guard', Icons.lock_outline, const Color(0xFFFBBF24)),
+        const SizedBox(height: 8),
+        Text(
+          'Controls how the Settings and Move & Place buttons are opened, to prevent accidental access.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Hold',
+              icon: Icons.touch_app,
+              active: state.guardMode == GuardMode.hold,
+              onTap: () { state.guardMode = GuardMode.hold; state.saveState(); state.notify(); },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Taps',
+              icon: Icons.ads_click,
+              active: state.guardMode == GuardMode.taps,
+              onTap: () { state.guardMode = GuardMode.taps; state.saveState(); state.notify(); },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Off',
+              icon: Icons.lock_open_outlined,
+              active: state.guardMode == GuardMode.off,
+              onTap: () { state.guardMode = GuardMode.off; state.saveState(); state.notify(); },
+            ),
+          ],
+        ),
+        if (state.guardMode == GuardMode.hold) ...[
+          const SizedBox(height: 12),
+          _sliderCard(
+            label: 'Hold Duration',
+            valueLabel: '${state.guardHoldSeconds.toStringAsFixed(1)}s',
+            value: state.guardHoldSeconds,
+            min: 1.0,
+            max: 10.0,
+            divisions: 18,
+            onChanged: (v) { state.guardHoldSeconds = v; state.saveState(); state.notify(); },
+          ),
+        ],
+        if (state.guardMode == GuardMode.taps) ...[
+          const SizedBox(height: 12),
+          _sliderCard(
+            label: 'Number of Taps',
+            valueLabel: '${state.guardTapCount} taps',
+            value: state.guardTapCount.toDouble().clamp(2.0, 5.0),
+            min: 2.0,
+            max: 5.0,
+            divisions: 3,
+            onChanged: (v) { state.guardTapCount = v.round(); state.saveState(); state.notify(); },
+          ),
+        ],
         const SizedBox(height: 24),
 
         // Storage
@@ -1130,6 +1381,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildBgColorPicker(AppState state) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: kBgColors.map((b) {
+        final active = state.bgColorName == b.name;
+        return GestureDetector(
+          onTap: () => state.setBgColor(b.name),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: b.color,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: active
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.2),
+                width: active ? 3 : 1.5,
+              ),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        spreadRadius: 0,
+                      )
+                    ]
+                  : null,
+            ),
+            child: Text(
+              b.name,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: b.color.computeLuminance() > 0.4
+                    ? Colors.black.withValues(alpha: active ? 0.85 : 0.55)
+                    : Colors.white.withValues(alpha: active ? 1.0 : 0.7),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildScanColorPicker(AppState state) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1193,12 +1490,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _sectionLabel(String text, IconData icon, Color color) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 10),
+        Icon(icon, size: 26, color: color),
+        const SizedBox(width: 12),
         Text(
           text.toUpperCase(),
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             letterSpacing: 1.5,
             color: color,
@@ -1267,16 +1564,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 16,
+                Icon(icon, size: 22,
                     color: active
                         ? const Color(0xFFC7D2FE)
                         : Colors.white.withValues(alpha: 0.4)),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
               ],
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                   color: active
@@ -1316,13 +1613,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(label.toUpperCase(),
                   style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Colors.white.withValues(alpha: 0.8),
                       letterSpacing: 1.2)),
               Text(valueLabel,
                   style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 17,
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF22D3EE))),
@@ -1362,15 +1659,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(label.toUpperCase(),
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: Colors.white.withValues(alpha: 0.9),
                         letterSpacing: 1.2)),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(subtitle,
                     style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.4))),
+                        fontSize: 15,
+                        color: Colors.white.withValues(alpha: 0.55),
+                        height: 1.4)),
               ],
             ),
           ),
@@ -1392,7 +1690,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text(
                 value ? 'ON' : 'OFF',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                   color: value
@@ -1414,18 +1712,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required Color borderColor,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return _PressIconBtn(
+      icon: icon,
+      color: color,
+      bgColor: bgColor,
+      borderColor: borderColor,
       onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor),
-        ),
-        child: Center(child: Icon(icon, size: 16, color: color)),
-      ),
     );
   }
 
@@ -1523,6 +1815,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Text('Confirm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pressable icon button with scale + brightness depression feedback
+// ─────────────────────────────────────────────────────────────────────────────
+class _PressIconBtn extends StatefulWidget {
+  const _PressIconBtn({
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.borderColor,
+    required this.onTap,
+  });
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final Color borderColor;
+  final VoidCallback onTap;
+
+  @override
+  State<_PressIconBtn> createState() => _PressIconBtnState();
+}
+
+class _PressIconBtnState extends State<_PressIconBtn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _bright;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 160),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.82).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+    _bright = Tween<double>(begin: 1.0, end: 1.6).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _down() => _ctrl.forward();
+
+  void _up() {
+    _ctrl.reverse();
+    widget.onTap();
+  }
+
+  void _cancel() => _ctrl.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _down(),
+      onTapUp: (_) => _up(),
+      onTapCancel: _cancel,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, __) => Transform.scale(
+          scale: _scale.value,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.matrix([
+              _bright.value, 0, 0, 0, 0,
+              0, _bright.value, 0, 0, 0,
+              0, 0, _bright.value, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: widget.bgColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: widget.borderColor),
+              ),
+              child: Center(
+                child: Icon(widget.icon, size: 16, color: widget.color),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
