@@ -1112,51 +1112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
-        const SizedBox(height: 8),
-        Text(
-          'Press activates on touch-down. Release activates when you lift your finger. Scan cycles through buttons automatically and activates on confirmation.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _toggleButton(
-              label: 'Press',
-              active: state.activationMode == ActivationMode.press,
-              onTap: () {
-                state.activationMode = ActivationMode.press;
-                state.stopScan();
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Release',
-              active: state.activationMode == ActivationMode.release,
-              onTap: () {
-                state.activationMode = ActivationMode.release;
-                state.stopScan();
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Scan',
-              active: state.activationMode == ActivationMode.scan,
-              enabled: state.buttons.length > 1,
-              onTap: () {
-                state.activationMode = ActivationMode.scan;
-                state.saveState();
-                state.notify();
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
         // Tap Feedback
         _sectionLabel('Tap Feedback', Icons.notifications, const Color(0xFFFBBF24)),
         const SizedBox(height: 8),
@@ -1202,7 +1157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _sliderCard(
           label: 'Debounce Time',
-          valueLabel: '\${state.debounceTime}s',
+          valueLabel: '${state.debounceTime}s',
           value: state.debounceTime,
           min: 0,
           max: 5,
@@ -1212,6 +1167,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
             state.saveState();
             state.notify();
           },
+        ),
+        const SizedBox(height: 24),
+
+        // Activation Mode
+        _sectionLabel('Activation Method', Icons.mouse, const Color(0xFF22D3EE)),
+        const SizedBox(height: 8),
+        Text(
+          'Press activates on touch-down. Release activates when you lift your finger. Scan cycles through buttons automatically and activates on confirmation.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Press',
+              active: state.activationMode == ActivationMode.press,
+              onTap: () {
+                state.activationMode = ActivationMode.press;
+                state.stopScan();
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Release',
+              active: state.activationMode == ActivationMode.release,
+              onTap: () {
+                state.activationMode = ActivationMode.release;
+                state.stopScan();
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Scan',
+              active: state.activationMode == ActivationMode.scan,
+              enabled: state.buttons.length > 1,
+              onTap: () {
+                state.activationMode = ActivationMode.scan;
+                state.saveState();
+                state.notify();
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 24),
 
