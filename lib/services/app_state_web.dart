@@ -226,3 +226,21 @@ void setWebFullscreen(bool value) {
     }
   } catch (_) {}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Scan tick sounds — delegates to window.tdTick (see web/index.html)
+// ─────────────────────────────────────────────────────────────────────────
+
+void playTick() {
+  try {
+    final t = globalContext['tdTick'];
+    if (t != null) (t as JSObject).callMethodVarArgs('tick'.toJS, []);
+  } catch (_) {}
+}
+
+void playScanStartSound() {
+  try {
+    final t = globalContext['tdTick'];
+    if (t != null) (t as JSObject).callMethodVarArgs('start'.toJS, []);
+  } catch (_) {}
+}

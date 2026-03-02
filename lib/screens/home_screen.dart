@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../constants.dart';
@@ -32,9 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _moveTapCount = 0;
   Timer? _moveTapTimer;
 
-  // ── Session hint (shown once per session when guard button first touched) ──
-  bool _hasShownGuardHint = false;
-
   // ── Gesture tracking for positioning mode ────────────────────────
   String? _draggingBtnId;
   Offset? _dragStartGlobal;
@@ -42,7 +40,14 @@ class _HomeScreenState extends State<HomeScreen> {
   double? _scaleStartValue; // initial scale when pinch begins
 
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _settingsHoldTimer?.cancel();
     _settingsTapTimer?.cancel();
     _moveHoldTimer?.cancel();
@@ -50,30 +55,65 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // ── Session guard hint ────────────────────────────────────────────────
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (!mounted) return false;
+    final state = context.read<AppState>();
+    if (state.showSettings || state.isPositioningMode) return false;
+    final key = event.logicalKey.keyLabel;
+    // Scan confirmation
+    if (state.activationMode == ActivationMode.scan) {
+      if (key == state.scanConfirmKey) {
+        state.activateScanTarget();
+        return true;
+      }
+    }
+    // Direct button activation (always available)
+    for (int i = 0; i < state.switchKeys.length && i < state.buttons.length; i++) {
+      final binding = state.switchKeys[i];
+      if (binding.isNotEmpty && key == binding) {
+        state.activateButton(state.buttons[i].id);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // ── Guard hint (shown on every button press when a guard is active) ────────
   void _showGuardHint(AppState state) {
-    if (_hasShownGuardHint) return;
-    setState(() => _hasShownGuardHint = true);
     final String? msg;
     switch (state.guardMode) {
       case GuardMode.hold:
         final secs = state.guardHoldSeconds.round();
-        msg = 'Hold this button for ${secs}s to open';
+        msg = 'Hold for ${secs}s to open settings';
       case GuardMode.taps:
-        msg = 'Tap this button ${state.guardTapCount} times quickly to open';
+        msg = 'Tap ${state.guardTapCount}× quickly to open settings';
       case GuardMode.off:
         msg = null;
     }
     if (msg == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            msg,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.65),
+              fontWeight: FontWeight.w400,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.black.withValues(alpha: 0.55),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          margin: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+      );
   }
 
   // ── Generic guard helpers ────────────────────────────────────────────
@@ -232,13 +272,68 @@ class _HomeScreenState extends State<HomeScreen> {
           // ── Scan overlay ──────────────────────────────────────────
           if (state.activationMode == ActivationMode.scan &&
               !state.showSettings &&
-              !state.isPositioningMode)
+              !state.isPositioningMode) ...[
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => state.activateScanTarget(),
                 behavior: HitTestBehavior.translucent,
               ),
             ),
+            // "Tap to begin" hint when waiting for first switch press
+            if (state.scanPaused)
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 28,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        'Tap your switch to begin scanning',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Stop button (bottom-right, part of scan progression)
+            if (state.scanStopButton)
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+                right: 20,
+                child: IgnorePointer(
+                  child: _ScanStopButton(
+                    highlighted: state.scanStopHighlighted,
+                    scanColor: state.currentScanColor,
+                    paused: state.scanPaused,
+                  ),
+                ),
+              ),
+            // Alt button (bottom-left, speaks phrase without stopping scan)
+            if (state.scanAltButton)
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+                left: 20,
+                child: IgnorePointer(
+                  child: _ScanAltButton(
+                    highlighted: state.scanAltHighlighted,
+                    activateCount: state.scanAltActivateCount,
+                    scanColor: state.currentScanColor,
+                    paused: state.scanPaused,
+                    phrase: state.scanAltButtonPhrase,
+                  ),
+                ),
+              ),
+          ],
 
           // ── Output bar ────────────────────────────────────────────
           OutputBar(
@@ -912,4 +1007,177 @@ class _GridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GridPainter old) => old.isLight != isLight;
+}
+
+/// Stop button shown in the bottom-right corner during scan mode.
+/// Highlighted when the scan progression lands on it.
+class _ScanAltButton extends StatefulWidget {
+  const _ScanAltButton({
+    required this.highlighted,
+    required this.activateCount,
+    required this.scanColor,
+    required this.paused,
+    required this.phrase,
+  });
+  final bool highlighted;
+  final int activateCount;
+  final ScanColorDef scanColor;
+  final bool paused;
+  final String phrase;
+
+  @override
+  State<_ScanAltButton> createState() => _ScanAltButtonState();
+}
+
+class _ScanAltButtonState extends State<_ScanAltButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flash;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _flash = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _flash.reverse();
+      });
+    _glowAnim = CurvedAnimation(parent: _flash, curve: Curves.easeOut);
+  }
+
+  @override
+  void didUpdateWidget(_ScanAltButton old) {
+    super.didUpdateWidget(old);
+    if (widget.activateCount != old.activateCount) {
+      _flash.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ringColor = widget.highlighted
+        ? widget.scanColor.ring
+        : Colors.white.withValues(alpha: 0.15);
+    const bgColor = Colors.black;
+    final fgColor = widget.highlighted
+        ? widget.scanColor.ring
+        : Colors.white.withValues(alpha: widget.paused ? 0.25 : 0.7);
+
+    return AnimatedBuilder(
+      animation: _glowAnim,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.record_voice_over_outlined, size: 22, color: fgColor),
+          const SizedBox(width: 8),
+          Text(
+            widget.phrase.toUpperCase(),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: fgColor,
+            ),
+          ),
+        ],
+      ),
+      builder: (context, child) {
+        final t = _glowAnim.value; // driven by activation, not highlight
+        return Transform.scale(
+          scale: 1.0 + t * 0.09,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: t > 0
+                    ? Color.lerp(ringColor, widget.scanColor.ring, t)!
+                    : ringColor,
+                width: widget.highlighted ? 2.5 : 1.0 + t * 2.0,
+              ),
+              boxShadow: t > 0
+                  ? [
+                      BoxShadow(
+                        color: widget.scanColor.glow
+                            .withValues(alpha: t * 0.9),
+                        blurRadius: t * 50,
+                        spreadRadius: t * 12,
+                      ),
+                    ]
+                  : widget.highlighted
+                      ? [
+                          BoxShadow(
+                            color: widget.scanColor.glow
+                                .withValues(alpha: 0.3),
+                            blurRadius: 14,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : [],
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ScanStopButton extends StatelessWidget {
+  const _ScanStopButton({
+    required this.highlighted,
+    required this.scanColor,
+    required this.paused,
+  });
+  final bool highlighted;
+  final ScanColorDef scanColor;
+  final bool paused;
+
+  @override
+  Widget build(BuildContext context) {
+    final ringColor = highlighted ? scanColor.ring : Colors.white.withValues(alpha: 0.15);
+    final glowColor = highlighted ? scanColor.glow : Colors.transparent;
+    const bgColor = Colors.black;
+    final fgColor = highlighted
+        ? scanColor.ring
+        : Colors.white.withValues(alpha: paused ? 0.25 : 0.7);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ringColor, width: highlighted ? 2.5 : 1.0),
+        boxShadow: highlighted
+            ? [BoxShadow(color: glowColor, blurRadius: 18, spreadRadius: 2)]
+            : [],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.stop_circle_outlined, size: 22, color: fgColor),
+          const SizedBox(width: 8),
+          Text(
+            'STOP',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: fgColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

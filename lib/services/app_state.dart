@@ -42,6 +42,13 @@ class AppState extends ChangeNotifier {
   bool scanTick = true;
   bool scanAnnounce = true;
   bool scanResetOnActivate = true;
+  bool scanClickToBegin = false;
+  bool scanStopButton = false;
+  bool scanAltButton = false;
+  String scanAltButtonPhrase = 'Something Else';
+  // ── Adapted switch access ─────────────────────────────────────────
+  List<String> switchKeys = ['1', '2', '3', '4'];
+  String scanConfirmKey = ' ';
   String bgColorName = 'Very Dark'; // background colour choice
 
   // ── Menu access guard ─────────────────────────────────────────────
@@ -78,7 +85,14 @@ class AppState extends ChangeNotifier {
   // ── Scan state ───────────────────────────────────────────────────
   Timer? _scanTimer;
   int scanIdx = 0;
-
+  bool _scanPaused = false;
+  bool get scanPaused => _scanPaused;
+  int get _altSlot  => buttons.length;
+  int get _stopSlot => buttons.length + (scanAltButton ? 1 : 0);
+  bool get scanStopHighlighted => scanStopButton && scanIdx == _stopSlot;
+  bool get scanAltHighlighted  => scanAltButton  && scanIdx == _altSlot;
+  int _scanAltActivateCount = 0;
+  int get scanAltActivateCount => _scanAltActivateCount;
   // ── Debounce ─────────────────────────────────────────────────────
   Timer? _debounceTimer;
 
@@ -228,6 +242,22 @@ class AppState extends ChangeNotifier {
     scanTick = p.getBool('scanTick') ?? true;
     scanAnnounce = p.getBool('scanAnnounce') ?? true;
     scanResetOnActivate = p.getBool('scanResetOnActivate') ?? true;
+    scanClickToBegin = p.getBool('scanClickToBegin') ?? false;
+    scanStopButton = p.getBool('scanStopButton') ?? false;
+    scanAltButton = p.getBool('scanAltButton') ?? false;
+    scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
+    final switchKeysJson = p.getString('switchKeys');
+    if (switchKeysJson != null) {
+      try {
+        final list = (jsonDecode(switchKeysJson) as List).cast<String>();
+        switchKeys = List.generate(4, (i) => i < list.length ? list[i] : '');
+      } catch (_) {
+        switchKeys = ['1', '2', '3', '4'];
+      }
+    } else {
+      switchKeys = ['1', '2', '3', '4'];
+    }
+    scanConfirmKey = p.getString('scanConfirmKey') ?? ' ';
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
       ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
@@ -277,6 +307,12 @@ class AppState extends ChangeNotifier {
     await p.setBool('scanTick', scanTick);
     await p.setBool('scanAnnounce', scanAnnounce);
     await p.setBool('scanResetOnActivate', scanResetOnActivate);
+    await p.setBool('scanClickToBegin', scanClickToBegin);
+    await p.setBool('scanStopButton', scanStopButton);
+    await p.setBool('scanAltButton', scanAltButton);
+    await p.setString('scanAltButtonPhrase', scanAltButtonPhrase);
+    await p.setString('switchKeys', jsonEncode(switchKeys));
+    await p.setString('scanConfirmKey', scanConfirmKey);
     await p.setString('selectedVoiceURI', selectedVoiceURI);
     await p.setDouble('ttsRate', ttsRate);      await p.setDouble('ttsVolume', ttsVolume);    await p.setString(
       'outputBarPos',
@@ -721,6 +757,12 @@ class AppState extends ChangeNotifier {
       return;
     }
     scanIdx = 0;
+    if (scanClickToBegin) {
+      _scanPaused = true;
+      notifyListeners();
+      return;
+    }
+    _scanPaused = false;
     notifyListeners();
     _startScanTimer();
   }
@@ -728,10 +770,34 @@ class AppState extends ChangeNotifier {
   // Starts (or restarts) the periodic scan timer without resetting scanIdx.
   void _startScanTimer() {
     _scanTimer?.cancel();
+    final total = buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0);
     _scanTimer = Timer.periodic(
       Duration(milliseconds: (scanInterval * 1000).round()),
       (_) {
-        scanIdx = (scanIdx + 1) % buttons.length;
+        if (total == 0) return;
+        scanIdx = (scanIdx + 1) % total;
+        // Audible tick on every advance
+        if (scanTick) {
+          if (kIsWeb) {
+            platform.playTick();
+          } else {
+            SystemSound.play(SystemSoundType.click);
+          }
+        }
+        // Stop button slot
+        if (scanStopButton && scanIdx == _stopSlot) {
+          if (scanAnnounce && !isSpeaking) _speakTts('Stop', 'scan_stop_btn');
+          showOutputBar('Stop');
+          notifyListeners();
+          return;
+        }
+        // Alt button slot
+        if (scanAltButton && scanIdx == _altSlot) {
+          if (!isSpeaking) _speakTts(scanAltButtonPhrase, 'scan_alt_btn');
+          showOutputBar(scanAltButtonPhrase);
+          notifyListeners();
+          return;
+        }
         if (scanAnnounce) {
           final label = buttons[scanIdx].label;
           if (label.isNotEmpty && !isSpeaking) {
@@ -750,10 +816,44 @@ class AppState extends ChangeNotifier {
   void stopScan() {
     _scanTimer?.cancel();
     _scanTimer = null;
+    _scanPaused = false;
   }
 
   void activateScanTarget() {
     if (buttons.isEmpty) return;
+    // Click-to-begin: first switch press starts the scan timer.
+    if (_scanPaused) {
+      _scanPaused = false;
+      notifyListeners();
+      // Play a distinct sound to signal scanning has started.
+      if (kIsWeb) {
+        platform.playScanStartSound();
+      } else {
+        SystemSound.play(SystemSoundType.click);
+        Future.delayed(
+          const Duration(milliseconds: 120),
+          () => SystemSound.play(SystemSoundType.click),
+        );
+      }
+      _startScanTimer();
+      return;
+    }
+    // Stop button selected: always speak then halt scanning.
+    if (scanStopButton && scanIdx == _stopSlot) {
+      _speakTts('Stop', 'scan_stop_btn'); // always interrupt & speak
+      stopScan();
+      scanIdx = 0;
+      notifyListeners();
+      return;
+    }
+    // Alt button selected: always speak phrase and continue scanning.
+    if (scanAltButton && scanIdx == _altSlot) {
+      _scanAltActivateCount++;
+      _speakTts(scanAltButtonPhrase, 'scan_alt_btn'); // always interrupt & speak
+      if (scanResetOnActivate) _startScanTimer();
+      notifyListeners();
+      return;
+    }
     final btn = buttons[scanIdx % buttons.length];
     activateButton(btn.id);
     // Reset the scan countdown so the user gets a full interval

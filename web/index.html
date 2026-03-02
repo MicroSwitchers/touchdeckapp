@@ -165,6 +165,45 @@
     };
 
     // ═════════════════════════════════════════════════════════════
+    // tdTick — scan advance click and scan-start tone via Web Audio API
+    // ═════════════════════════════════════════════════════════════
+    window.tdTick = {
+      _ctx: null,
+      _getCtx: function () {
+        if (!this._ctx) {
+          var Ctor = window.AudioContext || window.webkitAudioContext;
+          if (Ctor) this._ctx = new Ctor();
+        }
+        if (this._ctx && this._ctx.state === 'suspended') { this._ctx.resume(); }
+        return this._ctx;
+      },
+      _tone: function (freq, dur, gain) {
+        var ctx = this._getCtx();
+        if (!ctx) return;
+        try {
+          var osc  = ctx.createOscillator();
+          var amp  = ctx.createGain();
+          amp.gain.setValueAtTime(gain || 0.25, ctx.currentTime);
+          amp.gain.setTargetAtTime(0, ctx.currentTime + dur * 0.6, 0.025);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          osc.connect(amp);
+          amp.connect(ctx.destination);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + dur + 0.08);
+        } catch (e) {}
+      },
+      // Short click played on every scan advance
+      tick: function () { this._tone(900, 0.055, 0.22); },
+      // Ascending two-tone played when click-to-begin unpauses scanning
+      start: function () {
+        this._tone(440, 0.09, 0.30);
+        var self = this;
+        setTimeout(function () { self._tone(660, 0.11, 0.30); }, 85);
+      }
+    };
+
+    // ═════════════════════════════════════════════════════════════
     // ONE-TIME AudioContext + HTMLAudioElement unlock
     // (Only needed once per page load, unlike SpeechSynthesis)
     // ═════════════════════════════════════════════════════════════

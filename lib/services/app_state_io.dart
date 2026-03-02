@@ -12,6 +12,10 @@ import 'package:vibration/vibration.dart';
 // Fullscreen on native is handled by SystemChrome in app_state.dart.
 void setWebFullscreen(bool value) {} // no-op
 
+// Scan tick sounds are handled directly by SystemSound in app_state.dart.
+void playTick() {} // no-op
+void playScanStartSound() {} // no-op
+
 // ─────────────────────────────────────────────────────────────────────────
 // Feature flags
 // ─────────────────────────────────────────────────────────────────────────

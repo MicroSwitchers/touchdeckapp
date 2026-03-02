@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../constants.dart';
@@ -95,6 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Row(
                       children: [
                         _tabButton('Buttons', 'buttons'),
+                        _tabButton('Scan', 'scan'),
                         _tabButton('System', 'system'),
                       ],
                     ),
@@ -109,7 +111,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: _tab == 'buttons'
                     ? _buildButtonsTab(state)
-                    : _buildSystemTab(state),
+                    : _tab == 'scan'
+                        ? _buildScanTab(state)
+                        : _buildSystemTab(state),
               ),
             ),
 
@@ -756,105 +760,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 24),
 
-        // Activation Mode
-        _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
-        const SizedBox(height: 8),
-        Text(
-          '"Release" helps users who drag their finger. "Scan" highlights buttons one by one for switch users.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _toggleButton(
-              label: 'Press',
-              active: state.activationMode == ActivationMode.press,
-              onTap: () {
-                state.activationMode = ActivationMode.press;
-                state.stopScan();
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Release',
-              active: state.activationMode == ActivationMode.release,
-              onTap: () {
-                state.activationMode = ActivationMode.release;
-                state.stopScan();
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Scan',
-              active: state.activationMode == ActivationMode.scan,
-              enabled: state.buttons.length > 1,
-              onTap: () {
-                state.activationMode = ActivationMode.scan;
-                state.saveState();
-                state.notify();
-              },
-            ),
-          ],
-        ),
-
-        // Scan options
-        if (state.activationMode == ActivationMode.scan) ...[
-          const SizedBox(height: 16),
-          _sliderCard(
-            label: 'Scan Speed',
-            valueLabel: '${state.scanInterval}s per button',
-            value: state.scanInterval,
-            min: 0.5,
-            max: 5.0,
-            divisions: 9,
-            onChanged: (v) {
-              state.scanInterval = v;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 12),
-          _buildScanColorPicker(state),
-          const SizedBox(height: 12),
-          _toggleRow(
-            label: 'Audible Tick',
-            subtitle: 'Click on each selection change',
-            value: state.scanTick,
-            onTap: () {
-              state.scanTick = !state.scanTick;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Speak Button Name',
-            subtitle: 'Read button label aloud as scanner highlights it',
-            value: state.scanAnnounce,
-            onTap: () {
-              state.scanAnnounce = !state.scanAnnounce;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Reset Countdown on Selection',
-            subtitle: 'Restart the scan timer each time a button is activated',
-            value: state.scanResetOnActivate,
-            onTap: () {
-              state.scanResetOnActivate = !state.scanResetOnActivate;
-              state.saveState();
-              state.notify();
-            },
-          ),
-        ],
-        const SizedBox(height: 24),
-
         // Background Colour
         _sectionLabel('Background Colour', Icons.palette_outlined, const Color(0xFF94A3B8)),
         const SizedBox(height: 8),
@@ -1118,6 +1023,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         const SizedBox(height: 24),
 
+        // Adapted Switch Access
+        _sectionLabel('Adapted Switch Access', Icons.keyboard_alt_outlined, const Color(0xFF38BDF8)),
+        const SizedBox(height: 8),
+        Text(
+          'Map keyboard keys or switch inputs to directly activate buttons or confirm a scan selection.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.mouse, size: 16, color: Color(0xFF38BDF8)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'In Scan mode, a mouse click anywhere on the screen also confirms the highlighted button.',
+                  style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.65), height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'DIRECT ACTIVATION KEYS',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.35), letterSpacing: 1.0),
+        ),
+        const SizedBox(height: 8),
+        for (int i = 0; i < 4; i++) ..._switchKeyRow(context, state, i),
+        const SizedBox(height: 16),
+        Text(
+          'SCAN CONFIRMATION KEY',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.35), letterSpacing: 1.0),
+        ),
+        const SizedBox(height: 8),
+        _keyBindRow(
+          context,
+          label: 'Confirm Selection',
+          keyValue: state.scanConfirmKey,
+          onSet: (k) {
+            state.scanConfirmKey = k;
+            state.saveState();
+            state.notify();
+          },
+        ),
+        const SizedBox(height: 24),
+
         // Storage
         Container(
           padding: const EdgeInsets.only(top: 24),
@@ -1172,6 +1133,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SCAN TAB
+  // ══════════════════════════════════════════════════════════════════
+  Widget _buildScanTab(AppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('Activation Mode', Icons.mouse, const Color(0xFF22D3EE)),
+        const SizedBox(height: 8),
+        Text(
+          'Press activates on touch-down. Release activates when you lift your finger. Scan cycles through buttons automatically and activates on confirmation.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Press',
+              active: state.activationMode == ActivationMode.press,
+              onTap: () {
+                state.activationMode = ActivationMode.press;
+                state.stopScan();
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Release',
+              active: state.activationMode == ActivationMode.release,
+              onTap: () {
+                state.activationMode = ActivationMode.release;
+                state.stopScan();
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Scan',
+              active: state.activationMode == ActivationMode.scan,
+              enabled: state.buttons.length > 1,
+              onTap: () {
+                state.activationMode = ActivationMode.scan;
+                state.saveState();
+                state.notify();
+              },
+            ),
+          ],
+        ),
+        if (state.buttons.length <= 1 && state.activationMode != ActivationMode.scan) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: const Color(0xFF22D3EE).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF22D3EE).withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, size: 16, color: Color(0xFF67E8F9)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Scan mode requires at least two buttons. Go to the Buttons tab to add a second button, then return here to enable scanning.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.7),
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (state.activationMode == ActivationMode.scan) ...[
+          const SizedBox(height: 24),
+          _sectionLabel('Scan Speed', Icons.speed, const Color(0xFF22D3EE)),
+          const SizedBox(height: 12),
+          _sliderCard(
+            label: 'Seconds per button',
+            valueLabel: '${state.scanInterval}s',
+            value: state.scanInterval,
+            min: 0.5,
+            max: 5.0,
+            divisions: 9,
+            onChanged: (v) {
+              state.scanInterval = v;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 24),
+          _sectionLabel('Scan Highlight Colour', Icons.palette_outlined, const Color(0xFF22D3EE)),
+          const SizedBox(height: 12),
+          _buildScanColorPicker(state),
+          const SizedBox(height: 24),
+          _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
+          const SizedBox(height: 12),
+          _toggleRow(
+            label: 'Audible Tick',
+            subtitle: 'Click sound on each selection change',
+            value: state.scanTick,
+            onTap: () {
+              state.scanTick = !state.scanTick;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 8),
+          _toggleRow(
+            label: 'Speak Button Name',
+            subtitle: 'Read button label aloud as scanner highlights it',
+            value: state.scanAnnounce,
+            onTap: () {
+              state.scanAnnounce = !state.scanAnnounce;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 8),
+          _toggleRow(
+            label: 'Reset Countdown on Selection',
+            subtitle: 'Restart the scan timer each time a button is activated',
+            value: state.scanResetOnActivate,
+            onTap: () {
+              state.scanResetOnActivate = !state.scanResetOnActivate;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 8),
+          _toggleRow(
+            label: 'Click to Begin',
+            subtitle: 'First switch press starts scanning; subsequent presses activate',
+            value: state.scanClickToBegin,
+            onTap: () {
+              state.scanClickToBegin = !state.scanClickToBegin;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 8),
+          _toggleRow(
+            label: 'Show Stop Button',
+            subtitle: 'Adds a Stop option to the scan progression — select it to halt scanning',
+            value: state.scanStopButton,
+            onTap: () {
+              state.scanStopButton = !state.scanStopButton;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          const SizedBox(height: 8),
+          _toggleRow(
+            label: 'Something Else Button',
+            subtitle: 'Adds a button that speaks a custom phrase without stopping the scan',
+            value: state.scanAltButton,
+            onTap: () {
+              state.scanAltButton = !state.scanAltButton;
+              state.saveState();
+              state.notify();
+            },
+          ),
+          if (state.scanAltButton) ...[
+            const SizedBox(height: 8),
+            KeyedSubtree(
+              key: ValueKey(state.scanAltButtonPhrase),
+              child: _textField(
+                value: state.scanAltButtonPhrase,
+                placeholder: 'e.g. Something Else',
+                onChanged: (v) {
+                  state.scanAltButtonPhrase = v.isEmpty ? 'Something Else' : v;
+                  state.saveState();
+                },
+              ),
+            ),
+          ],
+        ],
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -1811,6 +1959,162 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child:
                 const Text('Confirm', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Returns [row, spacing] for a switch-key binding entry.
+  List<Widget> _switchKeyRow(BuildContext ctx, AppState state, int i) {
+    final label = state.buttons.length > i
+        ? 'Button ${i + 1}${state.buttons[i].label.isNotEmpty ? '  —  ${state.buttons[i].label}' : ''}'
+        : 'Button ${i + 1} (slot unused)';
+    return [
+      _keyBindRow(
+        ctx,
+        label: label,
+        keyValue: state.switchKeys[i],
+        enabled: state.buttons.length > i,
+        onSet: (k) {
+          state.switchKeys[i] = k;
+          state.saveState();
+          state.notify();
+        },
+      ),
+      if (i < 3) const SizedBox(height: 6),
+    ];
+  }
+
+  Widget _keyBindRow(
+    BuildContext context, {
+    required String label,
+    required String keyValue,
+    required ValueChanged<String> onSet,
+    bool enabled = true,
+  }) {
+    final display = keyValue == ' ' ? 'Space' : (keyValue.isEmpty ? '—' : keyValue);
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.38,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: enabled ? 0.05 : 0.02),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: enabled ? 0.1 : 0.05)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.85)),
+              ),
+            ),
+            GestureDetector(
+              onTap: enabled ? () => _showKeyCaptureDialog(context, label, onSet) : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF38BDF8).withValues(alpha: enabled ? 0.12 : 0.04),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF38BDF8).withValues(alpha: enabled ? 0.45 : 0.1),
+                  ),
+                ),
+                child: Text(
+                  display,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                    color: const Color(0xFF7DD3FC).withValues(alpha: enabled ? 1.0 : 0.3),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showKeyCaptureDialog(BuildContext context, String label, ValueChanged<String> onSet) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _KeyCaptureDialog(label: label, onSet: onSet),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Key-capture dialog for Adapted Switch Access bindings
+// ─────────────────────────────────────────────────────────────────────────────
+class _KeyCaptureDialog extends StatefulWidget {
+  const _KeyCaptureDialog({required this.label, required this.onSet});
+  final String label;
+  final ValueChanged<String> onSet;
+
+  @override
+  State<_KeyCaptureDialog> createState() => _KeyCaptureDialogState();
+}
+
+class _KeyCaptureDialogState extends State<_KeyCaptureDialog> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: _focus,
+      autofocus: true,
+      onKeyEvent: (_, event) {
+        if (event is KeyDownEvent) {
+          final k = event.logicalKey.keyLabel;
+          if (k.isNotEmpty) {
+            widget.onSet(k);
+            Navigator.of(context).pop();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        backgroundColor: const Color(0xFF1C1C2A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          widget.label,
+          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.keyboard_alt_outlined, color: Color(0xFF38BDF8), size: 44),
+            const SizedBox(height: 14),
+            Text(
+              'Press any key or switch button',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.65), height: 1.5),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
           ),
         ],
       ),
