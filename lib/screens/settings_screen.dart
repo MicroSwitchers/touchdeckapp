@@ -14,7 +14,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _tab = 'buttons'; // 'buttons' | 'system'
+  String _tab = 'buttons'; // 'buttons' | 'scan' | 'system'
 
   @override
   Widget build(BuildContext context) {

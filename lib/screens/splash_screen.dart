@@ -72,9 +72,20 @@ class _SplashScreenState extends State<SplashScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // Icon
-                        SizedBox(
+                        Container(
                           width: 150,
                           height: 150,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(36),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                blurRadius: 48,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
                           child: CustomPaint(painter: _IconPainter()),
                         ),
                         const SizedBox(height: 28),
@@ -92,7 +103,8 @@ class _SplashScreenState extends State<SplashScreen>
                         const SizedBox(height: 14),
                         // Tagline
                         Text(
-                          'Configure your AAC buttons your way',
+                          'Quick and flexible talking switch configurations',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 15,
                             color: Colors.white.withValues(alpha: 0.5),
@@ -139,13 +151,11 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'TapDeck is designed for quick, flexible configuration '
-                            'of personal communication buttons. It is not intended '
+                            'TapDeck is designed for quick, flexible talking '
+                            'switch configurations. It is not intended '
                             'for use as a primary or mission-critical communication '
-                            'system.\n\n'
-                            'Only one configuration is saved at a time, held in '
-                            'your browser\'s local memory. Clearing browser data '
-                            'will erase your setup.',
+                            'system. Only one configuration is saved at a time '
+                            'in your browser\'s local memory.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13,
