@@ -151,11 +151,9 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'TapDeck is designed for quick, flexible talking '
-                            'switch configurations. It is not intended '
-                            'for use as a primary or mission-critical communication '
-                            'system. Only one configuration is saved at a time '
-                            'in your browser\'s local memory.',
+                            'This app is for flexible, informal, fun and recreational use. '
+                            'Not to be used as a primary communication device. '
+                            'You can only save one setup at a time, saved on your device\'s local memory.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13,
