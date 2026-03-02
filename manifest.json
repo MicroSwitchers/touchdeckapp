@@ -1,12 +1,12 @@
 {
-    "id": "/TouchDeck/",
-    "name": "TouchDeck",
-    "short_name": "TouchDeck",
+    "id": "/TapDeck/",
+    "name": "TapDeck",
+    "short_name": "TapDeck",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#09090b",
     "theme_color": "#6366f1",
-    "description": "A privacy-first AAC communication app for people with complex communication needs.",
+    "description": "Quick, flexible AAC communication buttons for personal use. Not intended as a mission-critical communication system.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
