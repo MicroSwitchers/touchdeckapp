@@ -96,8 +96,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Row(
                       children: [
                         _tabButton('Buttons', 'buttons'),
-                        _tabButton('Scan', 'scan'),
-                        _tabButton('System', 'system'),
+                        _tabButton('Activation', 'activation'),
+                        _tabButton('Setup', 'setup'),
                       ],
                     ),
                   ),
@@ -111,9 +111,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: _tab == 'buttons'
                     ? _buildButtonsTab(state)
-                    : _tab == 'scan'
+                    : _tab == 'activation'
                         ? _buildScanTab(state)
-                        : _buildSystemTab(state),
+                        : _buildSetupTab(state),
               ),
             ),
 
@@ -194,6 +194,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 24),
         // Edit form for selected button
         if (state.editingBtnId != null) _buildButtonEditor(state),
+
+        // ── Global button appearance ─────────────────────────────
+        const SizedBox(height: 8),
+        Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+        const SizedBox(height: 24),
+
+        // Label Position
+        _sectionLabel('Label Position', Icons.text_format, const Color(0xFFF472B6)),
+        const SizedBox(height: 8),
+        Text(
+          'Where the label appears on each button.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'On Button',
+              active: state.labelPos == LabelPosition.on,
+              onTap: () {
+                state.labelPos = LabelPosition.on;
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Under',
+              active: state.labelPos == LabelPosition.under,
+              onTap: () {
+                state.labelPos = LabelPosition.under;
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Hidden',
+              active: state.labelPos == LabelPosition.off,
+              onTap: () {
+                state.labelPos = LabelPosition.off;
+                state.saveState();
+                state.notify();
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Layout
+        _sectionLabel('Button Layout', Icons.grid_view, const Color(0xFF818CF8)),
+        const SizedBox(height: 8),
+        Text(
+          'Enter positioning mode to drag and resize buttons.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final state = context.read<AppState>();
+              Navigator.of(context).pop();
+              state.closeSettings();
+              state.togglePositioning(true);
+            },
+            icon: const Icon(Icons.open_with, size: 20),
+            label: const Text('MOVE & PLACE BUTTONS',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFA5B4FC),
+              side: BorderSide(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.45),
+                  style: BorderStyle.solid),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 32),
       ],
     );
   }
@@ -484,7 +565,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           builder: (context, snap) {
             final sizeStr = snap.hasData ? state.formatBytes(snap.data!) : '…';
             return Text(
-              'Recordings are using $sizeStr of storage. Go to the System tab to free up space.',
+              'Recordings are using $sizeStr of storage. Go to the Setup tab to free up space.',
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.white.withValues(alpha: 0.3),
@@ -740,7 +821,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ══════════════════════════════════════════════════════════════════
   //  SYSTEM TAB
   // ══════════════════════════════════════════════════════════════════
-  Widget _buildSystemTab(AppState state) {
+  Widget _buildSetupTab(AppState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -769,65 +850,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 12),
         _buildBgColorPicker(state),
-        const SizedBox(height: 24),
-
-        // Tap Feedback
-        _sectionLabel('Tap Feedback', Icons.notifications, const Color(0xFFFBBF24)),
-        const SizedBox(height: 8),
-        Text(
-          'Get confirmation when you tap a button.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _toggleButton(
-              label: 'Vibration',
-              icon: Icons.bolt,
-              active: state.hapticsEnabled,
-              onTap: () {
-                state.hapticsEnabled = !state.hapticsEnabled;
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 12),
-            _toggleButton(
-              label: 'Sound',
-              icon: Icons.music_note,
-              active: state.audioCueEnabled,
-              onTap: () {
-                state.audioCueEnabled = !state.audioCueEnabled;
-                state.saveState();
-                state.notify();
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // Activation Cooldown
-        _sectionLabel(
-            'Activation Cooldown', Icons.hourglass_bottom, const Color(0xFF34D399)),
-        const SizedBox(height: 8),
-        Text(
-          'Prevents accidental double-taps by ignoring extra touches for a short time.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        _sliderCard(
-          label: 'Debounce Time',
-          valueLabel: '${state.debounceTime}s',
-          value: state.debounceTime,
-          min: 0,
-          max: 5,
-          divisions: 10,
-          onChanged: (v) {
-            state.debounceTime = v;
-            state.saveState();
-            state.notify();
-          },
-        ),
         const SizedBox(height: 24),
 
         // Recorded Voice Volume
@@ -887,82 +909,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 12),
         _buildVoicePicker(context, state),
-        const SizedBox(height: 24),
-
-        // Button Label Position
-        _sectionLabel('Button Label Position', Icons.text_format, const Color(0xFFF472B6)),
-        const SizedBox(height: 8),
-        Text(
-          'Where the button label appears.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _toggleButton(
-              label: 'On Button',
-              active: state.labelPos == LabelPosition.on,
-              onTap: () {
-                state.labelPos = LabelPosition.on;
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Under',
-              active: state.labelPos == LabelPosition.under,
-              onTap: () {
-                state.labelPos = LabelPosition.under;
-                state.saveState();
-                state.notify();
-              },
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Hidden',
-              active: state.labelPos == LabelPosition.off,
-              onTap: () {
-                state.labelPos = LabelPosition.off;
-                state.saveState();
-                state.notify();
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-
-        // Button Layout
-        _sectionLabel('Button Layout', Icons.grid_view, const Color(0xFF818CF8)),
-        const SizedBox(height: 8),
-        Text(
-          'Enter positioning mode to arrange your buttons.',
-          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              final state = context.read<AppState>();
-              Navigator.of(context).pop();
-              state.closeSettings();
-              state.togglePositioning(true);
-            },
-            icon: const Icon(Icons.open_with, size: 20),
-            label: const Text('MOVE & PLACE BUTTONS',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFA5B4FC),
-              side: BorderSide(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.45),
-                  style: BorderStyle.solid),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
         const SizedBox(height: 24),
 
         // Menu Access Guard
@@ -1210,6 +1156,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 24),
+
+        // Tap Feedback
+        _sectionLabel('Tap Feedback', Icons.notifications, const Color(0xFFFBBF24)),
+        const SizedBox(height: 8),
+        Text(
+          'Get confirmation when a button is activated.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Vibration',
+              icon: Icons.bolt,
+              active: state.hapticsEnabled,
+              onTap: () {
+                state.hapticsEnabled = !state.hapticsEnabled;
+                state.saveState();
+                state.notify();
+              },
+            ),
+            const SizedBox(width: 12),
+            _toggleButton(
+              label: 'Sound',
+              icon: Icons.music_note,
+              active: state.audioCueEnabled,
+              onTap: () {
+                state.audioCueEnabled = !state.audioCueEnabled;
+                state.saveState();
+                state.notify();
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Activation Cooldown
+        _sectionLabel('Activation Cooldown', Icons.hourglass_bottom, const Color(0xFF34D399)),
+        const SizedBox(height: 8),
+        Text(
+          'Prevents accidental double-taps by ignoring extra touches for a short time.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        _sliderCard(
+          label: 'Debounce Time',
+          valueLabel: '\${state.debounceTime}s',
+          value: state.debounceTime,
+          min: 0,
+          max: 5,
+          divisions: 10,
+          onChanged: (v) {
+            state.debounceTime = v;
+            state.saveState();
+            state.notify();
+          },
+        ),
+        const SizedBox(height: 24),
+
         // ── Scan options — always visible, greyed out when scan is not active ──
         Opacity(
           opacity: scanActive ? 1.0 : 0.38,
