@@ -1187,34 +1187,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-        if (state.buttons.length <= 1 && state.activationMode != ActivationMode.scan) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: const Color(0xFF22D3EE).withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF22D3EE).withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info_outline, size: 16, color: Color(0xFF67E8F9)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Scan mode requires at least two buttons. Go to the Buttons tab to add a second button, then return here to enable scanning.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.7),
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+
         if (state.activationMode == ActivationMode.scan) ...[
           const SizedBox(height: 24),
           _sectionLabel('Scan Speed', Icons.speed, const Color(0xFF22D3EE)),

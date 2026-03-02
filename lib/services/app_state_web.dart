@@ -222,7 +222,11 @@ void setWebFullscreen(bool value) {
       final docEl = doc['documentElement'] as JSObject?;
       docEl?.callMethodVarArgs('requestFullscreen'.toJS, []);
     } else {
-      doc.callMethodVarArgs('exitFullscreen'.toJS, []);
+      // Only call exitFullscreen if the document currently has a fullscreen element
+      final fullscreenEl = doc['fullscreenElement'];
+      if (fullscreenEl != null) {
+        doc.callMethodVarArgs('exitFullscreen'.toJS, []);
+      }
     }
   } catch (_) {}
 }
