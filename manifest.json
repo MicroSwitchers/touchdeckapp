@@ -6,7 +6,7 @@
     "display": "standalone",
     "background_color": "#09090b",
     "theme_color": "#6366f1",
-    "description": "Quick, flexible AAC communication buttons for personal use. Not intended as a mission-critical communication system.",
+    "description": "Quick and flexible talking switch configurations. Not intended as a mission-critical communication system.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
