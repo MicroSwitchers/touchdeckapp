@@ -1247,6 +1247,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
                 const SizedBox(height: 12),
                 _toggleRow(
+                  label: 'Sub-scan Phrases',
+                  subtitle: 'After selecting a button, scan through its phrases so you can choose which one to speak',
+                  value: state.scanSubScan,
+                  onTap: () {
+                    state.scanSubScan = !state.scanSubScan;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
                   label: 'Audible Tick',
                   subtitle: 'Click sound on each selection change',
                   value: state.scanTick,

@@ -316,6 +316,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+            // Sub-scan phrase indicator
+            if (state.inSubScan)
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 28,
+                left: 24,
+                right: 24,
+                child: IgnorePointer(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: state.currentScanColor.ring.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 14,
+                              color: state.currentScanColor.ring.withValues(alpha: 0.9),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Phrase ${(state.subScanValidSlots.isNotEmpty ? state.subScanValidSlots[state.subScanPhraseIdx] + 1 : 1)} of ${state.subScanValidSlots.length}  •  tap to select',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // Stop button (bottom-right, part of scan progression)
             if (state.scanStopButton)
               Positioned(
@@ -396,7 +440,9 @@ class _HomeScreenState extends State<HomeScreen> {
             final isSpeakingThis =
                 state.isSpeaking && state.playingButtonId == btn.id;
             final isScanHL = state.activationMode == ActivationMode.scan &&
-                state.buttons.indexOf(btn) == state.scanIdx;
+                (state.inSubScan
+                    ? state.subScanBtnId == btn.id
+                    : state.buttons.indexOf(btn) == state.scanIdx);
 
             Widget button = BigButton(
               data: btn,

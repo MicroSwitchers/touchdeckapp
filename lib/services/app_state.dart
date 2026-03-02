@@ -48,6 +48,7 @@ class AppState extends ChangeNotifier {
   String scanAltButtonPhrase = 'Something Else';
   bool scanStopOnSelection = false;
   bool scanConfirmTone = false;
+  bool scanSubScan = false;
   // ── Adapted switch access ─────────────────────────────────────────
   List<String> switchKeys = ['1', '2', '3', '4'];
   String scanConfirmKey = ' ';
@@ -91,6 +92,15 @@ class AppState extends ChangeNotifier {
   int scanIdx = 0;
   bool _scanPaused = false;
   bool get scanPaused => _scanPaused;
+  // ── Sub-scan state ────────────────────────────────────────────────
+  bool _inSubScan = false;
+  String? _subScanBtnId;
+  int _subScanPhraseIdx = 0;
+  List<int> _subScanValidSlots = [];
+  bool get inSubScan => _inSubScan;
+  String? get subScanBtnId => _subScanBtnId;
+  int get subScanPhraseIdx => _subScanPhraseIdx;
+  List<int> get subScanValidSlots => List.unmodifiable(_subScanValidSlots);
   int get _altSlot  => buttons.length;
   int get _stopSlot => buttons.length + (scanAltButton ? 1 : 0);
   bool get scanStopHighlighted => scanStopButton && scanIdx == _stopSlot;
@@ -252,6 +262,7 @@ class AppState extends ChangeNotifier {
     scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
     scanStopOnSelection = p.getBool('scanStopOnSelection') ?? false;
     scanConfirmTone = p.getBool('scanConfirmTone') ?? false;
+    scanSubScan = p.getBool('scanSubScan') ?? false;
     final switchKeysJson = p.getString('switchKeys');
     if (switchKeysJson != null) {
       try {
@@ -320,6 +331,7 @@ class AppState extends ChangeNotifier {
     await p.setString('scanAltButtonPhrase', scanAltButtonPhrase);
     await p.setBool('scanStopOnSelection', scanStopOnSelection);
     await p.setBool('scanConfirmTone', scanConfirmTone);
+    await p.setBool('scanSubScan', scanSubScan);
     await p.setString('switchKeys', jsonEncode(switchKeys));
     await p.setString('scanConfirmKey', scanConfirmKey);
     await p.setString('settingsKey', settingsKey);
@@ -827,6 +839,73 @@ class AppState extends ChangeNotifier {
     _scanTimer?.cancel();
     _scanTimer = null;
     _scanPaused = false;
+    _exitSubScan();
+  }
+
+  void _exitSubScan() {
+    _inSubScan = false;
+    _subScanBtnId = null;
+    _subScanPhraseIdx = 0;
+    _subScanValidSlots = [];
+  }
+
+  // Enters sub-scan mode for [btn], cycling through its valid phrases.
+  void _startSubScanTimer(AppButton btn) {
+    _scanTimer?.cancel();
+    // Build the list of valid phrase slots for this button
+    final validSlots = <int>[];
+    for (int i = 0; i < btn.phrases.length; i++) {
+      if (btn.phrases[i].trim().isNotEmpty ||
+          (i < btn.hasAudio.length && btn.hasAudio[i])) {
+        validSlots.add(i);
+      }
+    }
+    // Fewer than 2 valid phrases — skip sub-scan, activate directly
+    if (validSlots.length < 2) {
+      activateButton(btn.id);
+      if (scanResetOnActivate) _startScanTimer();
+      return;
+    }
+    _inSubScan = true;
+    _subScanBtnId = btn.id;
+    _subScanPhraseIdx = 0;
+    _subScanValidSlots = validSlots;
+    // Announce first phrase immediately
+    _announceCurrentSubPhrase(btn);
+    notifyListeners();
+    // Start the cycling timer
+    _scanTimer = Timer.periodic(
+      Duration(milliseconds: (scanInterval * 1000).round()),
+      (_) {
+        _subScanPhraseIdx = (_subScanPhraseIdx + 1) % _subScanValidSlots.length;
+        if (scanTick) {
+          if (kIsWeb) platform.playTick();
+          else SystemSound.play(SystemSoundType.click);
+        }
+        final b = buttons.firstWhere((x) => x.id == _subScanBtnId,
+            orElse: () => _defaultButton());
+        if (!buttons.any((x) => x.id == _subScanBtnId)) {
+          stopScan();
+          return;
+        }
+        _announceCurrentSubPhrase(b);
+        notifyListeners();
+      },
+    );
+  }
+
+  void _announceCurrentSubPhrase(AppButton btn) {
+    if (_subScanValidSlots.isEmpty) return;
+    final slot = _subScanValidSlots[_subScanPhraseIdx];
+    final text = btn.phrases[slot].trim();
+    final hasAudio = slot < btn.hasAudio.length && btn.hasAudio[slot];
+    if (hasAudio) {
+      if (!isSpeaking) _playRecordedAudio(btn.id, slot);
+      showOutputBar(text.isNotEmpty ? text : '▶ Phrase ${slot + 1}');
+    } else if (text.isNotEmpty) {
+      if (!isSpeaking) _speakTts(text, btn.id);
+      showOutputBar(text);
+    }
   }
 
   Future<void> activateScanTarget() async {
@@ -864,7 +943,40 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    // ── Sub-scan: user confirms a phrase within the selected button ──
+    if (_inSubScan) {
+      final subBtn = buttons.firstWhere((b) => b.id == _subScanBtnId,
+          orElse: () => _defaultButton());
+      if (!buttons.any((b) => b.id == _subScanBtnId) ||
+          _subScanValidSlots.isEmpty) {
+        _scanTimer?.cancel();
+        _exitSubScan();
+        if (scanResetOnActivate) _startScanTimer();
+        notifyListeners();
+        return;
+      }
+      final phraseSlot = _subScanValidSlots[_subScanPhraseIdx];
+      _scanTimer?.cancel();
+      _exitSubScan();
+      if (scanConfirmTone) await platform.playConfirmTone();
+      // Force the button to play the sub-scanned phrase slot
+      subBtn.phraseIndex = phraseSlot;
+      activateButton(subBtn.id);
+      if (scanStopOnSelection) {
+        stopScan();
+        scanIdx = 0;
+        notifyListeners();
+        return;
+      }
+      if (scanResetOnActivate) _startScanTimer();
+      return;
+    }
     final btn = buttons[scanIdx % buttons.length];
+    // Sub-scan mode: enter phrase cycling for this button (tone plays on phrase confirm, not here)
+    if (scanSubScan) {
+      _startSubScanTimer(btn);
+      return;
+    }
     // Confirmation tone: play and await completion before speaking
     if (scanConfirmTone) {
       await platform.playConfirmTone();
