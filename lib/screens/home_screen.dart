@@ -59,8 +59,19 @@ class _HomeScreenState extends State<HomeScreen> {
     if (event is! KeyDownEvent) return false;
     if (!mounted) return false;
     final state = context.read<AppState>();
-    if (state.showSettings || state.isPositioningMode) return false;
     final key = event.logicalKey.keyLabel;
+
+    // Setup access key — opens settings directly, bypasses guard
+    if (state.settingsKey.isNotEmpty &&
+        key == state.settingsKey &&
+        !state.showSettings &&
+        !state.isPositioningMode) {
+      _openSettings();
+      return true;
+    }
+
+    if (state.showSettings || state.isPositioningMode) return false;
+
     // Scan confirmation
     if (state.activationMode == ActivationMode.scan) {
       if (key == state.scanConfirmKey) {

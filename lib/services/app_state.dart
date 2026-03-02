@@ -51,6 +51,8 @@ class AppState extends ChangeNotifier {
   // ── Adapted switch access ─────────────────────────────────────────
   List<String> switchKeys = ['1', '2', '3', '4'];
   String scanConfirmKey = ' ';
+  // ── Setup access key (opens settings via keyboard, bypasses guard) ───
+  String settingsKey = '';
   String bgColorName = 'Very Dark'; // background colour choice
 
   // ── Menu access guard ─────────────────────────────────────────────
@@ -262,6 +264,7 @@ class AppState extends ChangeNotifier {
       switchKeys = ['1', '2', '3', '4'];
     }
     scanConfirmKey = p.getString('scanConfirmKey') ?? ' ';
+    settingsKey = p.getString('settingsKey') ?? '';
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
       ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
@@ -319,6 +322,7 @@ class AppState extends ChangeNotifier {
     await p.setBool('scanConfirmTone', scanConfirmTone);
     await p.setString('switchKeys', jsonEncode(switchKeys));
     await p.setString('scanConfirmKey', scanConfirmKey);
+    await p.setString('settingsKey', settingsKey);
     await p.setString('selectedVoiceURI', selectedVoiceURI);
     await p.setDouble('ttsRate', ttsRate);      await p.setDouble('ttsVolume', ttsVolume);    await p.setString(
       'outputBarPos',

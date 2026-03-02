@@ -1023,6 +1023,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         const SizedBox(height: 24),
 
+        // Setup Access Key
+        _sectionLabel('Setup Access Key', Icons.vpn_key_outlined, const Color(0xFF4ADE80)),
+        const SizedBox(height: 8),
+        Text(
+          'A keyboard shortcut that opens Settings directly, bypassing the touch guard. Useful for the person configuring the app.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        _keyBindRow(
+          context,
+          label: 'Open Settings',
+          keyValue: state.settingsKey,
+          allowClear: true,
+          onSet: (k) {
+            state.settingsKey = k;
+            state.saveState();
+            state.notify();
+          },
+        ),
+        const SizedBox(height: 24),
+
         // Adapted Switch Access
         _sectionLabel('Adapted Switch Access', Icons.keyboard_alt_outlined, const Color(0xFF38BDF8)),
         const SizedBox(height: 8),
@@ -1997,6 +2018,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String keyValue,
     required ValueChanged<String> onSet,
     bool enabled = true,
+    bool allowClear = false,
   }) {
     final display = keyValue == ' ' ? 'Space' : (keyValue.isEmpty ? '—' : keyValue);
     return Opacity(
@@ -2016,6 +2038,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(fontSize: 15, color: Colors.white.withValues(alpha: 0.85)),
               ),
             ),
+            if (allowClear && keyValue.isNotEmpty) ...[
+              GestureDetector(
+                onTap: enabled ? () => onSet('') : null,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  ),
+                  child: Icon(Icons.close, size: 14,
+                      color: Colors.white.withValues(alpha: 0.45)),
+                ),
+              ),
+            ],
             GestureDetector(
               onTap: enabled ? () => _showKeyCaptureDialog(context, label, onSet) : null,
               child: Container(
