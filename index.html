@@ -14,7 +14,7 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="/touchdeckapp/">
+  <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -161,6 +161,45 @@
           if (synth.speaking || synth.pending) { synth.cancel(); }
           if (synth.paused) { synth.resume(); }
         } catch(e) {}
+      }
+    };
+
+    // ═════════════════════════════════════════════════════════════
+    // tdTick — scan advance click and scan-start tone via Web Audio API
+    // ═════════════════════════════════════════════════════════════
+    window.tdTick = {
+      _ctx: null,
+      _getCtx: function () {
+        if (!this._ctx) {
+          var Ctor = window.AudioContext || window.webkitAudioContext;
+          if (Ctor) this._ctx = new Ctor();
+        }
+        if (this._ctx && this._ctx.state === 'suspended') { this._ctx.resume(); }
+        return this._ctx;
+      },
+      _tone: function (freq, dur, gain) {
+        var ctx = this._getCtx();
+        if (!ctx) return;
+        try {
+          var osc  = ctx.createOscillator();
+          var amp  = ctx.createGain();
+          amp.gain.setValueAtTime(gain || 0.25, ctx.currentTime);
+          amp.gain.setTargetAtTime(0, ctx.currentTime + dur * 0.6, 0.025);
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          osc.connect(amp);
+          amp.connect(ctx.destination);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + dur + 0.08);
+        } catch (e) {}
+      },
+      // Short click played on every scan advance
+      tick: function () { this._tone(900, 0.055, 0.22); },
+      // Ascending two-tone played when click-to-begin unpauses scanning
+      start: function () {
+        this._tone(440, 0.09, 0.30);
+        var self = this;
+        setTimeout(function () { self._tone(660, 0.11, 0.30); }, 85);
       }
     };
 
@@ -350,6 +389,53 @@
         if (synth.speaking || synth.pending) { synth.cancel(); }
       }
     };
+  })();
+  </script>
+
+  <!--
+    iOS Safari fullscreen + text input fix.
+
+    iOS Safari shows a "Typing is not allowed in full screen" banner whenever
+    ANY <input> or <textarea> receives focus while in fullscreen — including
+    the hidden text field Flutter web uses internally for its text engine.
+    The user never intends to type; Flutter just keeps that element around.
+
+    Fix:
+      1. On fullscreenchange (entering fullscreen) — blur any focused input.
+      2. In capture phase, intercept focus events on input/textarea while in
+         fullscreen and immediately blur them, preventing the banner entirely.
+  -->
+  <script>
+  (function () {
+    'use strict';
+
+    function _isFullscreen() {
+      return !!(document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement);
+    }
+
+    function _blurActiveInput() {
+      var el = document.activeElement;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        el.blur();
+      }
+    }
+
+    // Blur on entering fullscreen
+    document.addEventListener('fullscreenchange',       _blurActiveInput, false);
+    document.addEventListener('webkitfullscreenchange', _blurActiveInput, false);
+    document.addEventListener('mozfullscreenchange',    _blurActiveInput, false);
+
+    // Intercept any focus on input/textarea while fullscreen is active
+    document.addEventListener('focus', function (e) {
+      if (!_isFullscreen()) return;
+      var el = e.target;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        e.stopPropagation();
+        setTimeout(function () { el.blur(); }, 0);
+      }
+    }, true /* capture */);
   })();
   </script>
 </head>
