@@ -46,6 +46,8 @@ class AppState extends ChangeNotifier {
   bool scanStopButton = false;
   bool scanAltButton = false;
   String scanAltButtonPhrase = 'Something Else';
+  bool scanStopOnSelection = false;
+  bool scanConfirmTone = false;
   // ── Adapted switch access ─────────────────────────────────────────
   List<String> switchKeys = ['1', '2', '3', '4'];
   String scanConfirmKey = ' ';
@@ -246,6 +248,8 @@ class AppState extends ChangeNotifier {
     scanStopButton = p.getBool('scanStopButton') ?? false;
     scanAltButton = p.getBool('scanAltButton') ?? false;
     scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
+    scanStopOnSelection = p.getBool('scanStopOnSelection') ?? false;
+    scanConfirmTone = p.getBool('scanConfirmTone') ?? false;
     final switchKeysJson = p.getString('switchKeys');
     if (switchKeysJson != null) {
       try {
@@ -311,6 +315,8 @@ class AppState extends ChangeNotifier {
     await p.setBool('scanStopButton', scanStopButton);
     await p.setBool('scanAltButton', scanAltButton);
     await p.setString('scanAltButtonPhrase', scanAltButtonPhrase);
+    await p.setBool('scanStopOnSelection', scanStopOnSelection);
+    await p.setBool('scanConfirmTone', scanConfirmTone);
     await p.setString('switchKeys', jsonEncode(switchKeys));
     await p.setString('scanConfirmKey', scanConfirmKey);
     await p.setString('selectedVoiceURI', selectedVoiceURI);
@@ -855,7 +861,25 @@ class AppState extends ChangeNotifier {
       return;
     }
     final btn = buttons[scanIdx % buttons.length];
+    // Confirmation tone: play a distinct sound before the phrase
+    if (scanConfirmTone) {
+      if (kIsWeb) {
+        platform.playScanStartSound();
+      } else {
+        SystemSound.play(SystemSoundType.click);
+        Future.delayed(
+          const Duration(milliseconds: 120),
+          () => SystemSound.play(SystemSoundType.click),
+        );
+      }
+    }
     activateButton(btn.id);
+    if (scanStopOnSelection) {
+      stopScan();
+      scanIdx = 0;
+      notifyListeners();
+      return;
+    }
     // Reset the scan countdown so the user gets a full interval
     // before the scanner moves on — gives time to respond.
     if (scanResetOnActivate) {

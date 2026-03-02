@@ -1141,6 +1141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   //  SCAN TAB
   // ══════════════════════════════════════════════════════════════════
   Widget _buildScanTab(AppState state) {
+    final scanActive = state.activationMode == ActivationMode.scan;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1187,111 +1188,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-
-        if (state.activationMode == ActivationMode.scan) ...[
-          const SizedBox(height: 24),
-          _sectionLabel('Scan Speed', Icons.speed, const Color(0xFF22D3EE)),
-          const SizedBox(height: 12),
-          _sliderCard(
-            label: 'Seconds per button',
-            valueLabel: '${state.scanInterval}s',
-            value: state.scanInterval,
-            min: 0.5,
-            max: 5.0,
-            divisions: 9,
-            onChanged: (v) {
-              state.scanInterval = v;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 24),
-          _sectionLabel('Scan Highlight Colour', Icons.palette_outlined, const Color(0xFF22D3EE)),
-          const SizedBox(height: 12),
-          _buildScanColorPicker(state),
-          const SizedBox(height: 24),
-          _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
-          const SizedBox(height: 12),
-          _toggleRow(
-            label: 'Audible Tick',
-            subtitle: 'Click sound on each selection change',
-            value: state.scanTick,
-            onTap: () {
-              state.scanTick = !state.scanTick;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Speak Button Name',
-            subtitle: 'Read button label aloud as scanner highlights it',
-            value: state.scanAnnounce,
-            onTap: () {
-              state.scanAnnounce = !state.scanAnnounce;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Reset Countdown on Selection',
-            subtitle: 'Restart the scan timer each time a button is activated',
-            value: state.scanResetOnActivate,
-            onTap: () {
-              state.scanResetOnActivate = !state.scanResetOnActivate;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Click to Begin',
-            subtitle: 'First switch press starts scanning; subsequent presses activate',
-            value: state.scanClickToBegin,
-            onTap: () {
-              state.scanClickToBegin = !state.scanClickToBegin;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Show Stop Button',
-            subtitle: 'Adds a Stop option to the scan progression — select it to halt scanning',
-            value: state.scanStopButton,
-            onTap: () {
-              state.scanStopButton = !state.scanStopButton;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          const SizedBox(height: 8),
-          _toggleRow(
-            label: 'Something Else Button',
-            subtitle: 'Adds a button that speaks a custom phrase without stopping the scan',
-            value: state.scanAltButton,
-            onTap: () {
-              state.scanAltButton = !state.scanAltButton;
-              state.saveState();
-              state.notify();
-            },
-          ),
-          if (state.scanAltButton) ...[
-            const SizedBox(height: 8),
-            KeyedSubtree(
-              key: ValueKey(state.scanAltButtonPhrase),
-              child: _textField(
-                value: state.scanAltButtonPhrase,
-                placeholder: 'e.g. Something Else',
-                onChanged: (v) {
-                  state.scanAltButtonPhrase = v.isEmpty ? 'Something Else' : v;
-                  state.saveState();
-                },
-              ),
+        const SizedBox(height: 24),
+        // ── Scan options — always visible, greyed out when scan is not active ──
+        Opacity(
+          opacity: scanActive ? 1.0 : 0.38,
+          child: IgnorePointer(
+            ignoring: !scanActive,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionLabel('Scan Speed', Icons.speed, const Color(0xFF22D3EE)),
+                const SizedBox(height: 12),
+                _sliderCard(
+                  label: 'Seconds per button',
+                  valueLabel: '${state.scanInterval}s',
+                  value: state.scanInterval,
+                  min: 0.5,
+                  max: 5.0,
+                  divisions: 9,
+                  onChanged: (v) {
+                    state.scanInterval = v;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 24),
+                _sectionLabel('Scan Highlight Colour', Icons.palette_outlined, const Color(0xFF22D3EE)),
+                const SizedBox(height: 12),
+                _buildScanColorPicker(state),
+                const SizedBox(height: 24),
+                _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
+                const SizedBox(height: 12),
+                _toggleRow(
+                  label: 'Audible Tick',
+                  subtitle: 'Click sound on each selection change',
+                  value: state.scanTick,
+                  onTap: () {
+                    state.scanTick = !state.scanTick;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Speak Button Name',
+                  subtitle: 'Read button label aloud as scanner highlights it',
+                  value: state.scanAnnounce,
+                  onTap: () {
+                    state.scanAnnounce = !state.scanAnnounce;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Reset Countdown on Selection',
+                  subtitle: 'Restart the scan timer each time a button is activated',
+                  value: state.scanResetOnActivate,
+                  onTap: () {
+                    state.scanResetOnActivate = !state.scanResetOnActivate;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Stop Scan on Selection',
+                  subtitle: 'Scanning halts after a button is activated',
+                  value: state.scanStopOnSelection,
+                  onTap: () {
+                    state.scanStopOnSelection = !state.scanStopOnSelection;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Confirmation Tone',
+                  subtitle: 'Plays a tone when a selection is confirmed, before the phrase is spoken',
+                  value: state.scanConfirmTone,
+                  onTap: () {
+                    state.scanConfirmTone = !state.scanConfirmTone;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Click to Begin',
+                  subtitle: 'First switch press starts scanning; subsequent presses activate',
+                  value: state.scanClickToBegin,
+                  onTap: () {
+                    state.scanClickToBegin = !state.scanClickToBegin;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Show Stop Button',
+                  subtitle: 'Adds a Stop option to the scan progression — select it to halt scanning',
+                  value: state.scanStopButton,
+                  onTap: () {
+                    state.scanStopButton = !state.scanStopButton;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
+                  label: 'Something Else Button',
+                  subtitle: 'Adds a button that speaks a custom phrase without stopping the scan',
+                  value: state.scanAltButton,
+                  onTap: () {
+                    state.scanAltButton = !state.scanAltButton;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                if (state.scanAltButton) ...[
+                  const SizedBox(height: 8),
+                  KeyedSubtree(
+                    key: ValueKey(state.scanAltButtonPhrase),
+                    child: _textField(
+                      value: state.scanAltButtonPhrase,
+                      placeholder: 'e.g. Something Else',
+                      onChanged: (v) {
+                        state.scanAltButtonPhrase = v.isEmpty ? 'Something Else' : v;
+                        state.saveState();
+                      },
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
         const SizedBox(height: 24),
       ],
     );
