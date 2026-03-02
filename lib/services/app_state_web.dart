@@ -248,3 +248,10 @@ void playScanStartSound() {
     if (t != null) (t as JSObject).callMethodVarArgs('start'.toJS, []);
   } catch (_) {}
 }
+
+// Plays the confirm tone and returns a Future that resolves once it has finished.
+// The start() tone: note 1 at 0ms (90ms), note 2 at 85ms (110ms) — total ~280ms.
+Future<void> playConfirmTone() async {
+  playScanStartSound();
+  await Future.delayed(const Duration(milliseconds: 310));
+}

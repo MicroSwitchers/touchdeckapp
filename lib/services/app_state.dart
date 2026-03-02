@@ -825,7 +825,7 @@ class AppState extends ChangeNotifier {
     _scanPaused = false;
   }
 
-  void activateScanTarget() {
+  Future<void> activateScanTarget() async {
     if (buttons.isEmpty) return;
     // Click-to-begin: first switch press starts the scan timer.
     if (_scanPaused) {
@@ -861,17 +861,9 @@ class AppState extends ChangeNotifier {
       return;
     }
     final btn = buttons[scanIdx % buttons.length];
-    // Confirmation tone: play a distinct sound before the phrase
+    // Confirmation tone: play and await completion before speaking
     if (scanConfirmTone) {
-      if (kIsWeb) {
-        platform.playScanStartSound();
-      } else {
-        SystemSound.play(SystemSoundType.click);
-        Future.delayed(
-          const Duration(milliseconds: 120),
-          () => SystemSound.play(SystemSoundType.click),
-        );
-      }
+      await platform.playConfirmTone();
     }
     activateButton(btn.id);
     if (scanStopOnSelection) {

@@ -15,6 +15,12 @@ void setWebFullscreen(bool value) {} // no-op
 // Scan tick sounds are handled directly by SystemSound in app_state.dart.
 void playTick() {} // no-op
 void playScanStartSound() {} // no-op
+Future<void> playConfirmTone() async {
+  SystemSound.play(SystemSoundType.click);
+  await Future.delayed(const Duration(milliseconds: 150));
+  SystemSound.play(SystemSoundType.click);
+  await Future.delayed(const Duration(milliseconds: 160));
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Feature flags
