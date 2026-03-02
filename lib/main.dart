@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'constants.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/app_state.dart';
 
 void main() async {
@@ -17,11 +17,11 @@ void main() async {
     statusBarBrightness: Brightness.dark,
     statusBarIconBrightness: Brightness.light,
   ));
-  runApp(TouchDeckApp(prefs: prefs));
+  runApp(TapDeckApp(prefs: prefs));
 }
 
-class TouchDeckApp extends StatelessWidget {
-  const TouchDeckApp({super.key, required this.prefs});
+class TapDeckApp extends StatelessWidget {
+  const TapDeckApp({super.key, required this.prefs});
   final SharedPreferences prefs;
 
   @override
@@ -29,7 +29,7 @@ class TouchDeckApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AppState(prefs)..init(),
       child: MaterialApp(
-        title: 'TouchDeck',
+        title: 'TapDeck',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(useMaterial3: true).copyWith(
           scaffoldBackgroundColor: kBackgroundColor,
@@ -39,7 +39,7 @@ class TouchDeckApp extends StatelessWidget {
             surface: kBackgroundColor,
           ),
         ),
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }
