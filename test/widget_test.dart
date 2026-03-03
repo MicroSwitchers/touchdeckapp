@@ -13,7 +13,7 @@ void main() {
   testWidgets('App renders', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    await tester.pumpWidget(TouchDeckApp(prefs: prefs));
-    expect(find.byType(TouchDeckApp), findsOneWidget);
+    await tester.pumpWidget(TapDeckApp(prefs: prefs));
+    expect(find.byType(TapDeckApp), findsOneWidget);
   });
 }

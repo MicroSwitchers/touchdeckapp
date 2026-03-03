@@ -851,7 +851,9 @@ class AppState extends ChangeNotifier {
         _scanPaused ||
         showSettings ||
         _inSubScan ||
-        buttons.isEmpty) return;
+        buttons.isEmpty) {
+      return;
+    }
 
     final total = buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0);
     if (total == 0) return;
@@ -900,7 +902,9 @@ class AppState extends ChangeNotifier {
     if (!_scanWaitingForAudio) return;
     if (activationMode != ActivationMode.scan ||
         _scanPaused ||
-        showSettings) return;
+        showSettings) {
+      return;
+    }
     _scanWaitingForAudio = false;
     if (_inSubScan) {
       _scheduleNextSubScanTick();
@@ -988,8 +992,11 @@ class AppState extends ChangeNotifier {
     if (!_inSubScan) return;
     _subScanPhraseIdx = (_subScanPhraseIdx + 1) % _subScanValidSlots.length;
     if (scanTick) {
-      if (kIsWeb) platform.playTick();
-      else SystemSound.play(SystemSoundType.click);
+      if (kIsWeb) {
+        platform.playTick();
+      } else {
+        SystemSound.play(SystemSoundType.click);
+      }
     }
     if (!buttons.any((x) => x.id == _subScanBtnId)) {
       stopScan();
