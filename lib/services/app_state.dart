@@ -47,7 +47,7 @@ class AppState extends ChangeNotifier {
   bool scanStopButton = false;
   bool scanAltButton = false;
   String scanAltButtonPhrase = 'Something Else';
-  bool scanStopOnSelection = true;
+  bool scanStopOnSelection = false;
   bool scanConfirmTone = false;
   bool scanSubScan = false;
   // ── Adapted switch access ─────────────────────────────────────────
@@ -272,7 +272,7 @@ class AppState extends ChangeNotifier {
     scanStopButton = p.getBool('scanStopButton') ?? false;
     scanAltButton = p.getBool('scanAltButton') ?? false;
     scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
-    scanStopOnSelection = p.getBool('scanStopOnSelection') ?? true;
+    scanStopOnSelection = p.getBool('scanStopOnSelection') ?? false;
     scanConfirmTone = p.getBool('scanConfirmTone') ?? false;
     scanSubScan = p.getBool('scanSubScan') ?? false;
     final switchKeysJson = p.getString('switchKeys');
@@ -377,11 +377,30 @@ class AppState extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────
   void addButton() {
     if (buttons.length >= 4) return;
-    final offset = buttons.length * 10.0;
+
+    // Find the point in percentage space that maximises the minimum distance
+    // to any existing button — i.e. the most open area on screen.
+    Offset bestPos = const Offset(50, 50);
+    double bestDist = -1;
+    for (double x = 10; x <= 90; x += 5) {
+      for (double y = 10; y <= 90; y += 5) {
+        final candidate = Offset(x, y);
+        double minDist = double.infinity;
+        for (final b in buttons) {
+          final d = (b.position - candidate).distance;
+          if (d < minDist) minDist = d;
+        }
+        if (minDist > bestDist) {
+          bestDist = minDist;
+          bestPos = candidate;
+        }
+      }
+    }
+
     final btn = AppButton(
       id: const Uuid().v4(),
       color: kColors[buttons.length % kColors.length],
-      position: Offset(50 + offset, 50 - offset),
+      position: bestPos,
     );
     buttons.add(btn);
     if (buttons.length > 1) touchTargetScreen = false;

@@ -1279,7 +1279,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.format_list_bulleted,
                       active: state.scanSubScan,
                       onTap: () {
+                        final needsStopOnSelection = !state.scanStopOnSelection;
                         state.scanSubScan = true;
+                        // Sub-scan requires Stop on Selection to work correctly.
+                        if (needsStopOnSelection) {
+                          state.scanStopOnSelection = true;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                '"Stop Scan on Selection" has been turned on — sub-scan needs it to work.',
+                              ),
+                              backgroundColor: const Color(0xFF1E1E2E),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        }
                         state.saveState();
                         state.notify();
                       },
