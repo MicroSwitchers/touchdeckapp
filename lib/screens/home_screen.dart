@@ -543,7 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isPressed: isPressed,
               isSpeaking: isSpeakingThis,
               isScanHighlighted: isScanHL,
-              scanColorDef: isScanHL ? state.currentScanColor : null,
+              scanColorDef: (isScanHL || isScanConfirmed) ? state.currentScanColor : null,
               isScanConfirmed: isScanConfirmed,
               showLabel: state.labelPos == LabelPosition.on,
               isPositioningMode: state.isPositioningMode,

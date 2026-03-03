@@ -1280,6 +1280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       active: state.scanSubScan,
                       onTap: () {
                         final needsStopOnSelection = !state.scanStopOnSelection;
+                        final needsConfirmTone = !state.scanConfirmTone;
                         state.scanSubScan = true;
                         // Sub-scan requires Stop on Selection to work correctly.
                         if (needsStopOnSelection) {
@@ -1302,6 +1303,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           );
+                        }
+                        // Confirmation tone greatly improves sub-scan usability.
+                        if (needsConfirmTone) {
+                          state.scanConfirmTone = true;
                         }
                         state.saveState();
                         state.notify();

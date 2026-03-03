@@ -154,17 +154,17 @@ class _BigButtonState extends State<BigButton>
                             spreadRadius: 6,
                           ),
                         ],
-                        // Scan confirmed — bright white ring flash
-                        if (widget.isScanConfirmed) ...[
+                        // Scan confirmed — brighter ring + glow in the highlight colour
+                        if (widget.isScanConfirmed && widget.scanColorDef != null) ...[
                           BoxShadow(
-                            color: Colors.white,
+                            color: widget.scanColorDef!.ring,
                             blurRadius: 0,
-                            spreadRadius: 11,
+                            spreadRadius: 14,
                           ),
                           BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            blurRadius: 40,
-                            spreadRadius: 10,
+                            color: widget.scanColorDef!.glow.withValues(alpha: 0.75),
+                            blurRadius: 48,
+                            spreadRadius: 12,
                           ),
                         ],
                       ],
