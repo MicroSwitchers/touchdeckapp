@@ -101,6 +101,10 @@ class AppState extends ChangeNotifier {
   // ── Scan confirmed flash (not persisted) ─────────────────────────
   String? _scanConfirmedBtnId;
   String? get scanConfirmedBtnId => _scanConfirmedBtnId;
+  // ── Scan audio-wait flag ───────────────────────────────────────
+  // True when the scan timer has fired and started an announcement;
+  // the next tick is deferred until the announcement finishes.
+  bool _scanWaitingForAudio = false;
   bool get inSubScan => _inSubScan;
   String? get subScanBtnId => _subScanBtnId;
   int get subScanPhraseIdx => _subScanPhraseIdx;
@@ -156,6 +160,7 @@ class AppState extends ChangeNotifier {
     _player.onPlayerComplete.listen((_) {
       isSpeaking = false;
       playingButtonId = null;
+      _onScanSpeechOrAudioComplete();
       notifyListeners();
     });
 
@@ -192,12 +197,14 @@ class AppState extends ChangeNotifier {
     _tts.setCompletionHandler(() {
       isSpeaking = false;
       playingButtonId = null;
+      _onScanSpeechOrAudioComplete();
       notifyListeners();
     });
 
     _tts.setErrorHandler((msg) {
       isSpeaking = false;
       playingButtonId = null;
+      _onScanSpeechOrAudioComplete();
       notifyListeners();
     });
   }
@@ -544,6 +551,7 @@ class AppState extends ChangeNotifier {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
           playingButtonId = null;
+          _onScanSpeechOrAudioComplete();
           notifyListeners();
         }
       });
@@ -621,6 +629,7 @@ class AppState extends ChangeNotifier {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
           playingButtonId = null;
+          _onScanSpeechOrAudioComplete();
           notifyListeners();
         }
       });
@@ -798,53 +807,88 @@ class AppState extends ChangeNotifier {
   // Starts (or restarts) the periodic scan timer without resetting scanIdx.
   void _startScanTimer() {
     _scanTimer?.cancel();
-    final total = buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0);
-    _scanTimer = Timer.periodic(
+    _scanWaitingForAudio = false;
+    _scheduleNextScanTick();
+  }
+
+  // Schedules a single one-shot tick after [scanInterval] seconds.
+  void _scheduleNextScanTick() {
+    _scanTimer = Timer(
       Duration(milliseconds: (scanInterval * 1000).round()),
-      (_) {
-        if (total == 0) return;
-        scanIdx = (scanIdx + 1) % total;
-        // Audible tick on every advance
-        if (scanTick) {
-          if (kIsWeb) {
-            platform.playTick();
-          } else {
-            SystemSound.play(SystemSoundType.click);
-          }
-        }
-        // Stop button slot
-        if (scanStopButton && scanIdx == _stopSlot) {
-          if (scanAnnounce && !isSpeaking) _speakTts('Stop', 'scan_stop_btn');
-          showOutputBar('Stop');
-          notifyListeners();
-          return;
-        }
-        // Alt button slot
-        if (scanAltButton && scanIdx == _altSlot) {
-          if (!isSpeaking) _speakTts(scanAltButtonPhrase, 'scan_alt_btn');
-          showOutputBar(scanAltButtonPhrase);
-          notifyListeners();
-          return;
-        }
-        if (scanAnnounce) {
-          final label = buttons[scanIdx].label;
-          if (label.isNotEmpty && !isSpeaking) {
-            _speakTts(label, buttons[scanIdx].id);
-          }
-        }
-        final scanLabel = buttons[scanIdx].label;
-        if (scanLabel.isNotEmpty && !isSpeaking) {
-          showOutputBar(scanLabel);
-        }
-        notifyListeners();
-      },
+      _onScanTick,
     );
+  }
+
+  // Called by the one-shot timer — advances the scan and announces.
+  void _onScanTick() {
+    _scanTimer = null;
+    if (activationMode != ActivationMode.scan ||
+        _scanPaused ||
+        showSettings ||
+        _inSubScan ||
+        buttons.isEmpty) return;
+
+    final total = buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0);
+    if (total == 0) return;
+    scanIdx = (scanIdx + 1) % total;
+
+    if (scanTick) {
+      if (kIsWeb) {
+        platform.playTick();
+      } else {
+        SystemSound.play(SystemSoundType.click);
+      }
+    }
+
+    final speakingBefore = isSpeaking;
+
+    // Stop button slot
+    if (scanStopButton && scanIdx == _stopSlot) {
+      if (scanAnnounce && !isSpeaking) _speakTts('Stop', 'scan_stop_btn');
+      showOutputBar('Stop');
+      notifyListeners();
+    // Alt button slot
+    } else if (scanAltButton && scanIdx == _altSlot) {
+      if (!isSpeaking) _speakTts(scanAltButtonPhrase, 'scan_alt_btn');
+      showOutputBar(scanAltButtonPhrase);
+      notifyListeners();
+    } else {
+      if (scanAnnounce) {
+        final label = buttons[scanIdx].label;
+        if (label.isNotEmpty && !isSpeaking) {
+          _speakTts(label, buttons[scanIdx].id);
+        }
+      }
+      showOutputBar(buttons[scanIdx].label);
+      notifyListeners();
+    }
+
+    // If this tick started a new announcement, wait for it to finish
+    // before scheduling the next advance — keeps rhythm predictable.
+    if (isSpeaking && !speakingBefore) {
+      _scanWaitingForAudio = true;
+    } else {
+      _scheduleNextScanTick();
+    }
+  }
+
+  // Called from every TTS/audio completion callback.
+  // Resumes the scan tick chain after the announcement finishes.
+  void _onScanSpeechOrAudioComplete() {
+    if (!_scanWaitingForAudio) return;
+    if (activationMode != ActivationMode.scan ||
+        _scanPaused ||
+        showSettings ||
+        _inSubScan) return;
+    _scanWaitingForAudio = false;
+    _scheduleNextScanTick();
   }
 
   void stopScan() {
     _scanTimer?.cancel();
     _scanTimer = null;
     _scanPaused = false;
+    _scanWaitingForAudio = false;
     scanIdx = -1; // clear highlight — nothing is selected after stopping
     _exitSubScan();
   }
