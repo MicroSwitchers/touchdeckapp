@@ -25475,7 +25475,7 @@ avk(){var s=0,r=A.K(t.H),q,p,o
 var $async$avk=A.L(function(a,b){if(a===1)return A.H(b,r)
 while(true)switch(s){case 0:try{q=v.G.navigator
 if(q!=null){p=A.cM(q)
-p.vibrate.apply(p,[50])}}catch(n){}return A.I(null,r)}})
+p.vibrate.apply(p,[40])}}catch(n){}return A.I(null,r)}})
 return A.J($async$avk,r)},
 arj(a,b){var s=0,r=A.K(t.N),q,p
 var $async$arj=A.L(function(c,d){if(c===1)return A.H(d,r)
