@@ -106,9 +106,10 @@ class _SplashScreenState extends State<SplashScreen>
                           'Quick and flexible talking switch configurations',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 19,
+                            color: Colors.white.withValues(alpha: 0.75),
                             letterSpacing: 0.3,
+                            height: 1.45,
                           ),
                         ),
                       ],
@@ -142,8 +143,8 @@ class _SplashScreenState extends State<SplashScreen>
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Colors.amber.shade400
-                                      .withValues(alpha: 0.85),
-                                  fontSize: 13,
+                                      .withValues(alpha: 0.95),
+                                  fontSize: 15,
                                   letterSpacing: 0.4,
                                 ),
                               ),
@@ -156,8 +157,8 @@ class _SplashScreenState extends State<SplashScreen>
                             'You can only save one setup at a time, saved on your device\'s local memory.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.55),
+                              fontSize: 15,
+                              color: Colors.white.withValues(alpha: 0.72),
                               height: 1.65,
                             ),
                           ),
@@ -172,8 +173,8 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Text(
                       'Tap anywhere to continue',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.28),
+                        fontSize: 16,
+                        color: Colors.white.withValues(alpha: 0.45),
                         letterSpacing: 0.3,
                       ),
                     ),

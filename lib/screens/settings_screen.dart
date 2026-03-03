@@ -1288,10 +1288,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             SnackBar(
                               content: const Text(
                                 '"Stop Scan on Selection" has been turned on — sub-scan needs it to work.',
+                                style: TextStyle(
+                                  color: Color(0xFF1A1A1A),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
                               ),
-                              backgroundColor: const Color(0xFF1E1E2E),
+                              backgroundColor: const Color(0xFFFBBF24),
                               behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 4),
+                              duration: const Duration(seconds: 5),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
