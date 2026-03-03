@@ -874,8 +874,8 @@ class AppState extends ChangeNotifier {
     _subScanBtnId = btn.id;
     _subScanPhraseIdx = 0;
     _subScanValidSlots = validSlots;
-    // Announce first phrase immediately
-    _announceCurrentSubPhrase(btn);
+    // Announce first phrase immediately, interrupting any ongoing announcement
+    _announceCurrentSubPhrase(btn, force: true);
     notifyListeners();
     // Start the cycling timer
     _scanTimer = Timer.periodic(
@@ -898,16 +898,16 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  void _announceCurrentSubPhrase(AppButton btn) {
+  void _announceCurrentSubPhrase(AppButton btn, {bool force = false}) {
     if (_subScanValidSlots.isEmpty) return;
     final slot = _subScanValidSlots[_subScanPhraseIdx];
     final text = btn.phrases[slot].trim();
     final hasAudio = slot < btn.hasAudio.length && btn.hasAudio[slot];
     if (hasAudio) {
-      if (!isSpeaking) _playRecordedAudio(btn.id, slot);
+      if (force || !isSpeaking) _playRecordedAudio(btn.id, slot);
       showOutputBar(text.isNotEmpty ? text : '▶ Phrase ${slot + 1}');
     } else if (text.isNotEmpty) {
-      if (!isSpeaking) _speakTts(text, btn.id);
+      if (force || !isSpeaking) _speakTts(text, btn.id);
       showOutputBar(text);
     }
   }
