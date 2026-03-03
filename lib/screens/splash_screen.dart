@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../services/app_state.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _proceed() {
+  void _goHome() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const HomeScreen(),
@@ -52,19 +55,122 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
+  Future<void> _selectSlot(AppState state, int slot) async {
+    if (slot != state.currentSlot) {
+      await state.switchToSlot(slot);
+    }
+    if (mounted) _goHome();
+  }
+
+  Widget _buildStartCard(AppState state, int slot) {
+    final isLast = state.currentSlot == slot;
+    final name = state.slotNames[slot];
+    final enabled = state.isInitialized;
+
+    return GestureDetector(
+      onTap: enabled ? () => _selectSlot(state, slot) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+        decoration: BoxDecoration(
+          color: isLast
+              ? const Color(0xFF312E81).withValues(alpha: 0.55)
+              : Colors.white.withValues(alpha: enabled ? 0.06 : 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isLast
+                ? const Color(0xFF818CF8)
+                : Colors.white.withValues(alpha: 0.15),
+            width: isLast ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Slot number badge
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: isLast
+                    ? const Color(0xFF4F46E5)
+                    : Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  '${slot + 1}',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: isLast
+                        ? Colors.white
+                        : Colors.white.withValues(
+                            alpha: enabled ? 0.45 : 0.2),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight:
+                      isLast ? FontWeight.w700 : FontWeight.w400,
+                  color: enabled
+                      ? (isLast
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.7))
+                      : Colors.white.withValues(alpha: 0.25),
+                ),
+              ),
+            ),
+            if (isLast && enabled)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'LAST USED',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFA5B4FC),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 10),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Colors.white.withValues(
+                  alpha: enabled ? (isLast ? 0.5 : 0.25) : 0.1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
-      body: GestureDetector(
-        onTap: _proceed,
-        behavior: HitTestBehavior.opaque,
-        child: FadeTransition(
+      body: FadeTransition(
           opacity: _fade,
           child: SlideTransition(
             position: _slide,
             child: SafeArea(
-              child: Column(
+              child: Consumer<AppState>(
+                builder: (context, state, _) => Column(
                 children: [
                   // ── Centre content ─────────────────────────────────────
                   Expanded(
@@ -116,9 +222,31 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
 
-                  // ── Disclaimer ─────────────────────────────────────────
+                  // ── Slot picker ──────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose a profile to begin',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.45),
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        for (int i = 0; i < 3; i++)
+                          _buildStartCard(state, i),
+                      ],
+                    ),
+                  ),
+
+                  // ── Disclaimer ─────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 18),
@@ -154,7 +282,7 @@ class _SplashScreenState extends State<SplashScreen>
                           Text(
                             'This app is for flexible, informal, fun and recreational use. '
                             'Not to be used as a primary communication device. '
-                            'You can only save one setup at a time, saved on your device\'s local memory.',
+                            'All data is saved locally on your device.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 15,
@@ -167,18 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
 
-                  // ── Tap hint ───────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 28),
-                    child: Text(
-                      'Tap anywhere to continue',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withValues(alpha: 0.45),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
             ),

@@ -80,6 +80,8 @@ class AppState extends ChangeNotifier {
       .color;
 
   // ── Runtime state (not persisted) ────────────────────────────────
+  /// Becomes true once init() has finished loading state from prefs.
+  bool isInitialized = false;
   bool showSettings = false;
   String settingsTab = 'buttons';
   String? activeButtonId; // currently pressed
@@ -178,6 +180,7 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     });
 
+    isInitialized = true;
     notifyListeners();
   }
 
