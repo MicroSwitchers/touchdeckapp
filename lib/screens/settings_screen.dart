@@ -1280,6 +1280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
                 const SizedBox(height: 12),
                 _toggleRow(
+                  icon: Icons.radio_button_checked,
                   label: 'Audible Tick',
                   subtitle: 'Click sound on each selection change',
                   value: state.scanTick,
@@ -1291,6 +1292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.record_voice_over,
                   label: 'Speak Button Name',
                   subtitle: 'Read button label aloud as scanner highlights it',
                   value: state.scanAnnounce,
@@ -1302,6 +1304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.replay,
                   label: 'Reset Countdown on Selection',
                   subtitle: 'Restart the scan timer each time a button is activated',
                   value: state.scanResetOnActivate,
@@ -1313,6 +1316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.stop_circle_outlined,
                   label: 'Stop Scan on Selection',
                   subtitle: 'Scanning halts after a button is activated',
                   value: state.scanStopOnSelection,
@@ -1324,6 +1328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.notifications_active_outlined,
                   label: 'Confirmation Tone',
                   subtitle: 'Plays a tone when a selection is confirmed, before the phrase is spoken',
                   value: state.scanConfirmTone,
@@ -1335,6 +1340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.touch_app,
                   label: 'Click to Begin',
                   subtitle: 'First switch press starts scanning; subsequent presses activate',
                   value: state.scanClickToBegin,
@@ -1346,6 +1352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.back_hand_outlined,
                   label: 'Show Stop Button',
                   subtitle: 'Adds a Stop option to the scan progression — select it to halt scanning',
                   value: state.scanStopButton,
@@ -1357,6 +1364,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.add_comment_outlined,
                   label: 'Something Else Button',
                   subtitle: 'Adds a button that speaks a custom phrase without stopping the scan',
                   value: state.scanAltButton,
@@ -1854,6 +1862,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String subtitle,
     required bool value,
     required VoidCallback onTap,
+    IconData? icon,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1864,6 +1873,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Row(
         children: [
+          if (icon != null) ...
+            [
+              Container(
+                width: 38,
+                height: 38,
+                margin: const EdgeInsets.only(right: 14),
+                decoration: BoxDecoration(
+                  color: value
+                      ? const Color(0xFF4F46E5).withValues(alpha: 0.18)
+                      : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: value
+                      ? const Color(0xFFC7D2FE)
+                      : Colors.white.withValues(alpha: 0.35),
+                ),
+              ),
+            ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
