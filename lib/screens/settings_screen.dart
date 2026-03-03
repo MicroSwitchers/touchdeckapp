@@ -998,7 +998,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Save Slots', Icons.bookmark_outline, const Color(0xFFA78BFA)),
         const SizedBox(height: 8),
         Text(
-          'Store up to 3 independent layouts. Each slot saves all buttons, settings, and voice recordings.',
+          'Store up to 3 independent profiles. Each profile saves its buttons, switch access settings, background colour, and voice recordings.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1009,7 +1009,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Display', Icons.fullscreen, const Color(0xFF64B5F6)),
         const SizedBox(height: 8),
         Text(
-          'Hide the system status and navigation bars for more screen space.',
+          'Hide the system status and navigation bars for more screen space. Applies to all profiles.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1025,7 +1025,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Background Colour', Icons.palette_outlined, const Color(0xFF94A3B8)),
         const SizedBox(height: 8),
         Text(
-          'Choose a background colour for the app.',
+          'Choose a background colour for this profile.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1037,7 +1037,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Recorded Voice Volume', Icons.volume_up, const Color(0xFF60A5FA)),
         const SizedBox(height: 8),
         Text(
-          'Boosts the volume of your microphone recordings.',
+          'Boosts the volume of your microphone recordings. Applies to all profiles.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1050,7 +1050,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           divisions: 78,
           onChanged: (v) {
             state.playbackGain = v;
-            state.saveState();
+            state.saveGlobalSettings();
             state.notify();
           },
         ),
@@ -1060,7 +1060,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Speech', Icons.record_voice_over, const Color(0xFF34D399)),
         const SizedBox(height: 8),
         Text(
-          'Adjust the volume, speaking speed, and choose a TTS voice.',
+          'Adjust the volume, speaking speed, and choose a TTS voice. Applies to all profiles.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1095,7 +1095,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Menu Access Guard', Icons.lock_outline, const Color(0xFFFBBF24)),
         const SizedBox(height: 8),
         Text(
-          'Controls how the Settings and Move & Place buttons are opened, to prevent accidental access.',
+          'Controls how the Settings and Move & Place buttons are opened, to prevent accidental access. Applies to all profiles.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1105,21 +1105,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Hold',
               icon: Icons.touch_app,
               active: state.guardMode == GuardMode.hold,
-              onTap: () { state.guardMode = GuardMode.hold; state.saveState(); state.notify(); },
+              onTap: () { state.guardMode = GuardMode.hold; state.saveGlobalSettings(); state.notify(); },
             ),
             const SizedBox(width: 8),
             _toggleButton(
               label: 'Taps',
               icon: Icons.ads_click,
               active: state.guardMode == GuardMode.taps,
-              onTap: () { state.guardMode = GuardMode.taps; state.saveState(); state.notify(); },
+              onTap: () { state.guardMode = GuardMode.taps; state.saveGlobalSettings(); state.notify(); },
             ),
             const SizedBox(width: 8),
             _toggleButton(
               label: 'Off',
               icon: Icons.lock_open_outlined,
               active: state.guardMode == GuardMode.off,
-              onTap: () { state.guardMode = GuardMode.off; state.saveState(); state.notify(); },
+              onTap: () { state.guardMode = GuardMode.off; state.saveGlobalSettings(); state.notify(); },
             ),
           ],
         ),
@@ -1132,7 +1132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             min: 1.0,
             max: 10.0,
             divisions: 18,
-            onChanged: (v) { state.guardHoldSeconds = v; state.saveState(); state.notify(); },
+            onChanged: (v) { state.guardHoldSeconds = v; state.saveGlobalSettings(); state.notify(); },
           ),
         ],
         if (state.guardMode == GuardMode.taps) ...[
@@ -1144,7 +1144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             min: 2.0,
             max: 5.0,
             divisions: 3,
-            onChanged: (v) { state.guardTapCount = v.round(); state.saveState(); state.notify(); },
+            onChanged: (v) { state.guardTapCount = v.round(); state.saveGlobalSettings(); state.notify(); },
           ),
         ],
         const SizedBox(height: 24),
@@ -1153,7 +1153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _sectionLabel('Setup Access Key', Icons.vpn_key_outlined, const Color(0xFF4ADE80)),
         const SizedBox(height: 8),
         Text(
-          'A keyboard shortcut that opens Settings directly, bypassing the touch guard. Useful for the person configuring the app.',
+          'A keyboard shortcut that opens Settings directly, bypassing the touch guard. Useful for the person configuring the app. Applies to all profiles.',
           style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
         ),
         const SizedBox(height: 12),
@@ -1164,7 +1164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           allowClear: true,
           onSet: (k) {
             state.settingsKey = k;
-            state.saveState();
+            state.saveGlobalSettings();
             state.notify();
           },
         ),

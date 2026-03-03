@@ -57,7 +57,7 @@ class AppState extends ChangeNotifier {
   List<String> switchKeys = ['1', '2', '3', '4'];
   String scanConfirmKey = ' ';
   // ── Setup access key (opens settings via keyboard, bypasses guard) ───
-  String settingsKey = '';
+  String settingsKey = 'M'; // default M key — app-wide, not per-profile
   String bgColorName = 'Very Dark'; // background colour choice
 
   // ── Menu access guard ─────────────────────────────────────────────
@@ -167,6 +167,8 @@ class AppState extends ChangeNotifier {
       _recorder = platform.createRecorder();
     }
 
+    // Load app-wide settings first (guard, TTS, fullscreen, setup key, volume).
+    await _loadGlobalSettings();
     await _initTts();
     await _loadState();
     // Restore persisted audio recordings for the active slot (web only —
@@ -253,6 +255,8 @@ class AppState extends ChangeNotifier {
 
   /// Encode all current settings + buttons into a plain map ready for
   /// jsonEncode. This is the canonical per-slot serialisation format.
+  /// Per-profile serialisation. App-wide settings (guard, TTS, fullscreen,
+  /// setup key, volume boost) are NOT stored here — see [saveGlobalSettings].
   Map<String, dynamic> _toStateMap() {
     return {
       'buttons': AppButton.encodeList(buttons),
@@ -262,8 +266,6 @@ class AppState extends ChangeNotifier {
       'audioCueEnabled': audioCueEnabled,
       'touchTargetScreen': touchTargetScreen,
       'debounceTime': debounceTime,
-      'playbackGain': playbackGain,
-      'ttsVolume': ttsVolume,
       'scanInterval': scanInterval,
       'scanColor': scanColor,
       'scanTick': scanTick,
@@ -279,17 +281,10 @@ class AppState extends ChangeNotifier {
       'scanSubScan': scanSubScan,
       'switchKeys': jsonEncode(switchKeys),
       'scanConfirmKey': scanConfirmKey,
-      'settingsKey': settingsKey,
-      'selectedVoiceURI': selectedVoiceURI,
-      'ttsRate': ttsRate,
       'outputBarPos': jsonEncode({'x': outputBarPos.dx, 'y': outputBarPos.dy}),
       'outputBarScale': outputBarScale,
       'showOutputBarInPositioning': showOutputBarInPositioning,
       'bgColorName': bgColorName,
-      'guardMode': guardMode.name,
-      'guardHoldSeconds': guardHoldSeconds,
-      'guardTapCount': guardTapCount,
-      'isFullscreen': isFullscreen,
       if (editingBtnId != null) 'editingBtnId': editingBtnId,
     };
   }
@@ -319,8 +314,6 @@ class AppState extends ChangeNotifier {
     audioCueEnabled = m['audioCueEnabled'] as bool? ?? true;
     touchTargetScreen = m['touchTargetScreen'] as bool? ?? false;
     debounceTime = (m['debounceTime'] as num?)?.toDouble() ?? 0.0;
-    playbackGain = (m['playbackGain'] as num?)?.toDouble() ?? 5.0;
-    ttsVolume = (m['ttsVolume'] as num?)?.toDouble() ?? 0.5;
     scanInterval = (m['scanInterval'] as num?)?.toDouble() ?? 2.0;
     scanColor = m['scanColor'] as String? ?? 'Yellow';
     scanTick = m['scanTick'] as bool? ?? true;
@@ -348,10 +341,6 @@ class AppState extends ChangeNotifier {
     }
 
     scanConfirmKey = m['scanConfirmKey'] as String? ?? ' ';
-    settingsKey = m['settingsKey'] as String? ?? '';
-    selectedVoiceURI = m['selectedVoiceURI'] as String? ?? '';
-    ttsRate = (m['ttsRate'] as num?)?.toDouble() ?? 1.0;
-    ttsVolume = (m['ttsVolume'] as num?)?.toDouble() ?? 0.5;
 
     final obpJson = m['outputBarPos'] as String?;
     if (obpJson != null) {
@@ -364,15 +353,6 @@ class AppState extends ChangeNotifier {
     outputBarScale = (m['outputBarScale'] as num?)?.toDouble() ?? 1.0;
     showOutputBarInPositioning = m['showOutputBarInPositioning'] as bool? ?? true;
     bgColorName = m['bgColorName'] as String? ?? 'Very Dark';
-
-    guardMode = GuardMode.values.firstWhere(
-      (v) => v.name == (m['guardMode'] as String? ?? 'hold'),
-      orElse: () => GuardMode.hold,
-    );
-    guardHoldSeconds = (m['guardHoldSeconds'] as num?)?.toDouble() ?? 3.0;
-    guardTapCount = m['guardTapCount'] as int? ?? 3;
-    isFullscreen = m['isFullscreen'] as bool? ?? false;
-    _applyFullscreen();
 
     editingBtnId = m['editingBtnId'] as String?;
     if (editingBtnId != null && !buttons.any((b) => b.id == editingBtnId)) {
@@ -493,6 +473,85 @@ class AppState extends ChangeNotifier {
     final p = _prefs;
     if (p == null) return; // guard: init not yet complete
     await p.setString('slot_${currentSlot}_state', jsonEncode(_toStateMap()));
+  }
+
+  /// Persist app-wide settings (shared across all profiles).
+  /// Call instead of [saveState] when modifying global settings.
+  Future<void> saveGlobalSettings() async {
+    final p = _prefs;
+    if (p == null) return;
+    await p.setString('global_settingsKey', settingsKey);
+    await p.setString('global_guardMode', guardMode.name);
+    await p.setDouble('global_guardHoldSeconds', guardHoldSeconds);
+    await p.setInt('global_guardTapCount', guardTapCount);
+    await p.setBool('global_isFullscreen', isFullscreen);
+    await p.setDouble('global_ttsRate', ttsRate);
+    await p.setDouble('global_ttsVolume', ttsVolume);
+    await p.setString('global_selectedVoiceURI', selectedVoiceURI);
+    await p.setDouble('global_playbackGain', playbackGain);
+  }
+
+  /// Load app-wide settings from global SharedPreferences keys.
+  /// On the first launch after this refactor, migrates values from the
+  /// existing slot-0 JSON (or legacy flat keys) so nothing is lost.
+  Future<void> _loadGlobalSettings() async {
+    final p = _prefs!;
+    // Migration sentinel: if global_settingsKey has never been saved,
+    // this is the first launch after the refactor — migrate existing data.
+    if (!p.containsKey('global_settingsKey')) {
+      // Preferred source: slot_0_state JSON (most users will have this).
+      final slot0Json = p.getString('slot_0_state');
+      if (slot0Json != null) {
+        try {
+          final m = jsonDecode(slot0Json) as Map<String, dynamic>;
+          settingsKey      = m['settingsKey']    as String? ?? 'M';
+          guardMode        = GuardMode.values.firstWhere(
+            (v) => v.name == (m['guardMode'] as String? ?? 'hold'),
+            orElse: () => GuardMode.hold,
+          );
+          guardHoldSeconds = (m['guardHoldSeconds'] as num?)?.toDouble() ?? 3.0;
+          guardTapCount    = m['guardTapCount']    as int?    ?? 3;
+          isFullscreen     = m['isFullscreen']     as bool?   ?? false;
+          ttsRate          = (m['ttsRate']          as num?)?.toDouble() ?? 1.0;
+          ttsVolume        = (m['ttsVolume']        as num?)?.toDouble() ?? 0.5;
+          selectedVoiceURI = m['selectedVoiceURI'] as String? ?? '';
+          playbackGain     = (m['playbackGain']     as num?)?.toDouble() ?? 5.0;
+          await saveGlobalSettings();
+          _applyFullscreen();
+          return;
+        } catch (_) {}
+      }
+      // Fall back: legacy flat keys (pre-slot era) or plain defaults.
+      settingsKey      = p.getString('settingsKey')      ?? 'M';
+      guardMode        = GuardMode.values.firstWhere(
+        (v) => v.name == (p.getString('guardMode') ?? 'hold'),
+        orElse: () => GuardMode.hold,
+      );
+      guardHoldSeconds = p.getDouble('guardHoldSeconds') ?? 3.0;
+      guardTapCount    = p.getInt('guardTapCount')       ?? 3;
+      isFullscreen     = p.getBool('isFullscreen')       ?? false;
+      ttsRate          = p.getDouble('ttsRate')          ?? 1.0;
+      ttsVolume        = p.getDouble('ttsVolume')        ?? 0.5;
+      selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
+      playbackGain     = p.getDouble('playbackGain')     ?? 5.0;
+      await saveGlobalSettings();
+      _applyFullscreen();
+      return;
+    }
+    // Normal path: read from global_* keys.
+    settingsKey      = p.getString('global_settingsKey')      ?? 'M';
+    guardMode        = GuardMode.values.firstWhere(
+      (v) => v.name == (p.getString('global_guardMode') ?? 'hold'),
+      orElse: () => GuardMode.hold,
+    );
+    guardHoldSeconds = p.getDouble('global_guardHoldSeconds') ?? 3.0;
+    guardTapCount    = p.getInt('global_guardTapCount')       ?? 3;
+    isFullscreen     = p.getBool('global_isFullscreen')       ?? false;
+    ttsRate          = p.getDouble('global_ttsRate')          ?? 1.0;
+    ttsVolume        = p.getDouble('global_ttsVolume')        ?? 0.5;
+    selectedVoiceURI = p.getString('global_selectedVoiceURI') ?? '';
+    playbackGain     = p.getDouble('global_playbackGain')     ?? 5.0;
+    _applyFullscreen();
   }
 
   // ── Web audio persistence (per-slot) ─────────────────────────────
@@ -818,24 +877,24 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Set TTS speaking rate and persist.
+  /// Set TTS speaking rate and persist (app-wide).
   void setTtsRate(double rate) {
     ttsRate = rate.clamp(0.25, 2.0);
-    saveState();
+    saveGlobalSettings();
     notifyListeners();
   }
 
-  /// Set TTS volume and persist.
+  /// Set TTS volume and persist (app-wide).
   void setTtsVolume(double vol) {
     ttsVolume = vol.clamp(0.0, 1.0);
-    saveState();
+    saveGlobalSettings();
     notifyListeners();
   }
 
-  /// Set the selected TTS voice by its URI/name and persist.
+  /// Set the selected TTS voice by its URI/name and persist (app-wide).
   void setTtsVoice(String uri) {
     selectedVoiceURI = uri;
-    saveState();
+    saveGlobalSettings();
     notifyListeners();
   }
 
@@ -1451,7 +1510,7 @@ class AppState extends ChangeNotifier {
   void setFullscreen(bool v) {
     isFullscreen = v;
     _applyFullscreen();
-    saveState();
+    saveGlobalSettings();
     notifyListeners();
   }
 
