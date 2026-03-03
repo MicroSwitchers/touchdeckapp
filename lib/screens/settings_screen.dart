@@ -1295,7 +1295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 12),
                 _toggleRow(
-                  icon: Icons.radio_button_checked,
+                  icon: Icons.volume_up,
                   label: 'Audible Tick',
                   subtitle: 'Click sound on each selection change',
                   value: state.scanTick,
