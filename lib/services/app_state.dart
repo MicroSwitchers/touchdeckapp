@@ -839,6 +839,7 @@ class AppState extends ChangeNotifier {
     _scanTimer?.cancel();
     _scanTimer = null;
     _scanPaused = false;
+    scanIdx = -1; // clear highlight — nothing is selected after stopping
     _exitSubScan();
   }
 
@@ -931,7 +932,6 @@ class AppState extends ChangeNotifier {
     if (scanStopButton && scanIdx == _stopSlot) {
       _speakTts('Stop', 'scan_stop_btn'); // always interrupt & speak
       stopScan();
-      scanIdx = 0;
       notifyListeners();
       return;
     }
@@ -964,13 +964,13 @@ class AppState extends ChangeNotifier {
       activateButton(subBtn.id);
       if (scanStopOnSelection) {
         stopScan();
-        scanIdx = 0;
         notifyListeners();
         return;
       }
       if (scanResetOnActivate) _startScanTimer();
       return;
     }
+    if (scanIdx < 0 || scanIdx >= buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0)) return;
     final btn = buttons[scanIdx % buttons.length];
     // Sub-scan mode: enter phrase cycling for this button (tone plays on phrase confirm, not here)
     if (scanSubScan) {
@@ -984,7 +984,6 @@ class AppState extends ChangeNotifier {
     activateButton(btn.id);
     if (scanStopOnSelection) {
       stopScan();
-      scanIdx = 0;
       notifyListeners();
       return;
     }

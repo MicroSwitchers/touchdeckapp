@@ -316,47 +316,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            // Sub-scan phrase indicator
+            // Sub-scan phrase list overlay
             if (state.inSubScan)
-              Positioned(
-                bottom: MediaQuery.of(context).padding.bottom + 28,
-                left: 24,
-                right: 24,
+              Positioned.fill(
                 child: IgnorePointer(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: state.currentScanColor.ring.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 14,
-                              color: state.currentScanColor.ring.withValues(alpha: 0.9),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Phrase ${(state.subScanValidSlots.isNotEmpty ? state.subScanValidSlots[state.subScanPhraseIdx] + 1 : 1)} of ${state.subScanValidSlots.length}  •  tap to select',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white.withValues(alpha: 0.85),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: Center(
+                    child: _buildSubScanPanel(state),
                   ),
                 ),
               ),
@@ -415,6 +380,147 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // SUB-SCAN PHRASE LIST PANEL
+  // ────────────────────────────────────────────────────────────────
+  Widget _buildSubScanPanel(AppState state) {
+    final btnIdx = state.buttons.indexWhere((b) => b.id == state.subScanBtnId);
+    if (btnIdx < 0) return const SizedBox.shrink();
+    final btn = state.buttons[btnIdx];
+    final slots = state.subScanValidSlots;
+    if (slots.isEmpty) return const SizedBox.shrink();
+
+    final accentColor = state.currentScanColor.ring;
+    final activeIdx = state.subScanPhraseIdx;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      constraints: const BoxConstraints(maxWidth: 440),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withValues(alpha: 0.55), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.25),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Header ──────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 13),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.graphic_eq, size: 15, color: accentColor),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    btn.label.isNotEmpty ? btn.label : 'Choose a phrase',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${activeIdx + 1} / ${slots.length}',
+                  style: TextStyle(
+                    color: accentColor.withValues(alpha: 0.8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ── Phrase rows ──────────────────────────────────────────
+          ...slots.asMap().entries.map((e) {
+            final rowIdx = e.key;
+            final slot = e.value;
+            final isActive = rowIdx == activeIdx;
+            final text = btn.phrases[slot].trim();
+            final hasAudio = slot < btn.hasAudio.length && btn.hasAudio[slot];
+            final displayText = text.isNotEmpty
+                ? text
+                : (hasAudio ? '▶  Recording ${slot + 1}' : 'Phrase ${slot + 1}');
+
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? accentColor.withValues(alpha: 0.22)
+                    : Colors.transparent,
+                border: Border(
+                  left: isActive
+                      ? BorderSide(color: accentColor, width: 4)
+                      : const BorderSide(color: Colors.transparent, width: 4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  if (hasAudio)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(
+                        Icons.mic,
+                        size: 15,
+                        color: isActive ? accentColor : Colors.white38,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      displayText,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : Colors.white54,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  if (isActive)
+                    Icon(Icons.chevron_left,
+                        size: 18, color: accentColor.withValues(alpha: 0.8)),
+                ],
+              ),
+            );
+          }),
+          // ── Footer hint ──────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+            ),
+            child: Text(
+              'Tap to speak the highlighted phrase',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 12,
+              ),
+            ),
+          ),
         ],
       ),
     );
