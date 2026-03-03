@@ -98,6 +98,9 @@ class AppState extends ChangeNotifier {
   String? _subScanBtnId;
   int _subScanPhraseIdx = 0;
   List<int> _subScanValidSlots = [];
+  // ── Scan confirmed flash (not persisted) ─────────────────────────
+  String? _scanConfirmedBtnId;
+  String? get scanConfirmedBtnId => _scanConfirmedBtnId;
   bool get inSubScan => _inSubScan;
   String? get subScanBtnId => _subScanBtnId;
   int get subScanPhraseIdx => _subScanPhraseIdx;
@@ -853,6 +856,18 @@ class AppState extends ChangeNotifier {
     _subScanValidSlots = [];
   }
 
+  // Brief visual flash to confirm a scan selection.
+  void _flashScanConfirm(String btnId) {
+    _scanConfirmedBtnId = btnId;
+    notifyListeners();
+    Future.delayed(const Duration(milliseconds: 650), () {
+      if (_scanConfirmedBtnId == btnId) {
+        _scanConfirmedBtnId = null;
+        notifyListeners();
+      }
+    });
+  }
+
   // Enters sub-scan mode for [btn], cycling through its valid phrases.
   void _startSubScanTimer(AppButton btn) {
     _scanTimer?.cancel();
@@ -965,6 +980,7 @@ class AppState extends ChangeNotifier {
       // Force the button to play the sub-scanned phrase slot
       subBtn.phraseIndex = phraseSlot;
       activateButton(subBtn.id);
+      _flashScanConfirm(subBtn.id);
       if (scanStopOnSelection) {
         stopScan();
         notifyListeners();
@@ -990,6 +1006,7 @@ class AppState extends ChangeNotifier {
       await platform.playConfirmTone();
     }
     activateButton(btn.id);
+    _flashScanConfirm(btn.id);
     if (scanStopOnSelection) {
       stopScan();
       notifyListeners();

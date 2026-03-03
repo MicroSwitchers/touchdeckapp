@@ -9,6 +9,7 @@ class BigButton extends StatefulWidget {
   final bool isSpeaking;
   final bool isScanHighlighted;
   final ScanColorDef? scanColorDef;
+  final bool isScanConfirmed;
   final bool showLabel;
   final bool isPositioningMode;
   final VoidCallback? onTap;
@@ -22,6 +23,7 @@ class BigButton extends StatefulWidget {
     this.isSpeaking = false,
     this.isScanHighlighted = false,
     this.scanColorDef,
+    this.isScanConfirmed = false,
     this.showLabel = true,
     this.isPositioningMode = false,
     this.onTap,
@@ -150,6 +152,19 @@ class _BigButtonState extends State<BigButton>
                             color: widget.scanColorDef!.glow,
                             blurRadius: 48,
                             spreadRadius: 6,
+                          ),
+                        ],
+                        // Scan confirmed — bright white ring flash
+                        if (widget.isScanConfirmed) ...[
+                          BoxShadow(
+                            color: Colors.white,
+                            blurRadius: 0,
+                            spreadRadius: 11,
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            blurRadius: 40,
+                            spreadRadius: 10,
                           ),
                         ],
                       ],

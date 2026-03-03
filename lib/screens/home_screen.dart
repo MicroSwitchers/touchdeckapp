@@ -399,16 +399,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final activeIdx = state.subScanPhraseIdx;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 32),
-      constraints: const BoxConstraints(maxWidth: 440),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      constraints: const BoxConstraints(maxWidth: 460),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.88),
+        color: Colors.black.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: accentColor.withValues(alpha: 0.55), width: 2),
         boxShadow: [
           BoxShadow(
             color: accentColor.withValues(alpha: 0.25),
-            blurRadius: 24,
+            blurRadius: 28,
             spreadRadius: 2,
           ),
         ],
@@ -418,40 +418,25 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Header ──────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 13),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          if (btn.label.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 13),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+              ),
+              child: Text(
+                btn.label,
+                style: TextStyle(
+                  color: accentColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  letterSpacing: 0.5,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.graphic_eq, size: 15, color: accentColor),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    btn.label.isNotEmpty ? btn.label : 'Choose a phrase',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${activeIdx + 1} / ${slots.length}',
-                  style: TextStyle(
-                    color: accentColor.withValues(alpha: 0.8),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
           // ── Phrase rows ──────────────────────────────────────────
           ...slots.asMap().entries.map((e) {
             final rowIdx = e.key;
@@ -461,45 +446,43 @@ class _HomeScreenState extends State<HomeScreen> {
             final hasAudio = slot < btn.hasAudio.length && btn.hasAudio[slot];
             final displayText = text.isNotEmpty
                 ? text
-                : (hasAudio ? '▶  Recording ${slot + 1}' : 'Phrase ${slot + 1}');
+                : (hasAudio ? '▶  Audio ${slot + 1}' : 'Phrase ${slot + 1}');
 
             return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: isActive
-                    ? accentColor.withValues(alpha: 0.22)
+                    ? accentColor.withValues(alpha: 0.20)
                     : Colors.transparent,
                 border: Border(
                   left: isActive
-                      ? BorderSide(color: accentColor, width: 4)
-                      : const BorderSide(color: Colors.transparent, width: 4),
+                      ? BorderSide(color: accentColor, width: 5)
+                      : const BorderSide(color: Colors.transparent, width: 5),
                 ),
               ),
               child: Row(
                 children: [
                   if (hasAudio)
                     Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.only(right: 10),
                       child: Icon(
                         Icons.mic,
-                        size: 15,
-                        color: isActive ? accentColor : Colors.white38,
+                        size: 18,
+                        color: isActive ? accentColor : Colors.white30,
                       ),
                     ),
                   Expanded(
                     child: Text(
                       displayText,
                       style: TextStyle(
-                        color: isActive ? Colors.white : Colors.white54,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                        fontSize: 16,
+                        color: isActive ? Colors.white : Colors.white38,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+                        fontSize: isActive ? 24 : 20,
+                        height: 1.3,
                       ),
                     ),
                   ),
-                  if (isActive)
-                    Icon(Icons.chevron_left,
-                        size: 18, color: accentColor.withValues(alpha: 0.8)),
                 ],
               ),
             );
@@ -509,15 +492,15 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
               ),
             ),
             child: Text(
-              'Tap to speak the highlighted phrase',
+              'Tap to select',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
-                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.35),
+                fontSize: 13,
               ),
             ),
           ),
@@ -549,6 +532,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 (state.inSubScan
                     ? state.subScanBtnId == btn.id
                     : state.buttons.indexOf(btn) == state.scanIdx);
+            final isScanConfirmed = state.activationMode == ActivationMode.scan &&
+                state.scanConfirmedBtnId == btn.id;
 
             Widget button = BigButton(
               data: btn,
@@ -556,6 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isSpeaking: isSpeakingThis,
               isScanHighlighted: isScanHL,
               scanColorDef: isScanHL ? state.currentScanColor : null,
+              isScanConfirmed: isScanConfirmed,
               showLabel: state.labelPos == LabelPosition.on,
               isPositioningMode: state.isPositioningMode,
               onTapDown: () => _handleTapDown(state, btn),
