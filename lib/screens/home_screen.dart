@@ -290,41 +290,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 behavior: HitTestBehavior.translucent,
               ),
             ),
-            // "Tap to begin" hint when waiting for first switch press
-            if (state.scanPaused)
-              Positioned(
-                bottom: MediaQuery.of(context).padding.bottom + 28,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Text(
-                        'Tap your switch to begin scanning',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // Sub-scan phrase list overlay
-            if (state.inSubScan)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Center(
-                    child: _buildSubScanPanel(state),
-                  ),
-                ),
-              ),
             // Stop button (bottom-right, part of scan progression)
             if (state.scanStopButton)
               Positioned(
@@ -362,6 +327,48 @@ class _HomeScreenState extends State<HomeScreen> {
             position: state.outputBarPos,
             scale: state.outputBarScale,
           ),
+
+          // ── Scan tip overlays (above OutputBar) ───────────────────
+          // Rendered after OutputBar so they are never hidden beneath it.
+          if (state.activationMode == ActivationMode.scan &&
+              !state.showSettings &&
+              !state.isPositioningMode) ...[  
+            // "Tap to begin" hint when waiting for first switch press
+            if (state.scanPaused)
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 28,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        'Tap your switch to begin scanning',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Sub-scan phrase list overlay
+            if (state.inSubScan)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: _buildSubScanPanel(state),
+                  ),
+                ),
+              ),
+          ],
 
           // ── Positioning overlay ───────────────────────────────────
           if (state.isPositioningMode) _buildPositioningOverlay(state, _isLight(state.backgroundColor)),
@@ -528,10 +535,10 @@ class _HomeScreenState extends State<HomeScreen> {
             final isPressed = state.activeButtonId == btn.id;
             final isSpeakingThis =
                 state.isSpeaking && state.playingButtonId == btn.id;
+            // No button glows during sub-scan — the phrase panel shows what's happening.
             final isScanHL = state.activationMode == ActivationMode.scan &&
-                (state.inSubScan
-                    ? state.subScanBtnId == btn.id
-                    : state.buttons.indexOf(btn) == state.scanIdx);
+                !state.inSubScan &&
+                state.buttons.indexOf(btn) == state.scanIdx;
             final isScanConfirmed = state.activationMode == ActivationMode.scan &&
                 state.scanConfirmedBtnId == btn.id;
 
