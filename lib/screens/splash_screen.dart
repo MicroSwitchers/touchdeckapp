@@ -165,139 +165,114 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       body: FadeTransition(
-          opacity: _fade,
-          child: SlideTransition(
-            position: _slide,
-            child: SafeArea(
-              child: Consumer<AppState>(
-                builder: (context, state, _) => Column(
-                children: [
-                  // ── Centre content ─────────────────────────────────────
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Icon
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(36),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                                blurRadius: 48,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: CustomPaint(painter: _IconPainter()),
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: SafeArea(
+            child: Consumer<AppState>(
+              builder: (context, state, _) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ── Logo + title ──────────────────────────────
+                      const SizedBox(height: 40),
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                              blurRadius: 40,
+                              spreadRadius: 4,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 28),
-                        // App name
-                        const Text(
-                          'TapDeck',
-                          style: TextStyle(
-                            fontSize: 44,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.4,
-                            height: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        // Tagline
-                        Text(
-                          'Quick and flexible talking switch configurations',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 19,
-                            color: Colors.white.withValues(alpha: 0.75),
-                            letterSpacing: 0.3,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ── Slot picker ──────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Choose a profile to begin',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.45),
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        for (int i = 0; i < 3; i++)
-                          _buildStartCard(state, i),
-                      ],
-                    ),
-                  ),
-
-                  // ── Disclaimer ─────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08)),
+                        clipBehavior: Clip.antiAlias,
+                        child: CustomPaint(painter: _IconPainter()),
                       ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.info_outline,
-                                  size: 15,
-                                  color: Colors.amber.shade400
-                                      .withValues(alpha: 0.85)),
-                              const SizedBox(width: 7),
-                              Text(
-                                'Please note',
+                      const SizedBox(height: 20),
+                      const Text(
+                        'TapDeck',
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.4,
+                          height: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Quick and flexible talking switch configurations',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white.withValues(alpha: 0.75),
+                          letterSpacing: 0.3,
+                          height: 1.45,
+                        ),
+                      ),
+
+                      // ── Slot picker ───────────────────────────────
+                      const SizedBox(height: 32),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'CHOOSE A PROFILE',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white.withValues(alpha: 0.4),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      for (int i = 0; i < 3; i++) _buildStartCard(state, i),
+
+                      // ── Disclaimer ────────────────────────────────
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 18, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 15,
+                                color: Colors.amber.shade400
+                                    .withValues(alpha: 0.8)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'For informal and recreational use only. '
+                                'Not a primary communication device. '
+                                'All data is saved locally on your device.',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.amber.shade400
-                                      .withValues(alpha: 0.95),
-                                  fontSize: 15,
-                                  letterSpacing: 0.4,
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  height: 1.55,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'This app is for flexible, informal, fun and recreational use. '
-                            'Not to be used as a primary communication device. '
-                            'All data is saved locally on your device.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.white.withValues(alpha: 0.72),
-                              height: 1.65,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 28),
+                    ],
                   ),
-
-
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),
