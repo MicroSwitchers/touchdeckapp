@@ -19,13 +19,16 @@ bool get hasFileAudio => true;
 bool get hasRecording => true;
 
 // ─────────────────────────────────────────────────────────────────────────
-// Haptics — Web Vibration API
+// Haptics — Web Vibration API (Android Chrome; iOS Safari does not support it)
 // ─────────────────────────────────────────────────────────────────────────
 
 Future<void> vibrateDevice() async {
   try {
     final nav = globalContext['navigator'];
-    if (nav != null) (nav as JSObject).callMethodVarArgs('vibrate'.toJS, [50.toJS]);
+    if (nav != null) {
+      // navigator.vibrate(40) — vibrate for 40 ms
+      (nav as JSObject).callMethodVarArgs('vibrate'.toJS, [40.toJS]);
+    }
   } catch (_) {}
 }
 

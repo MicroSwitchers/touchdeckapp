@@ -36,8 +36,15 @@ bool get hasRecording => true;
 
 Future<void> vibrateDevice() async {
   try {
-    Vibration.vibrate(duration: 50);
-  } catch (_) {}
+    // HapticFeedback uses the Taptic Engine on iOS and the vibrator on Android.
+    // It is the most reliable haptic path across both platforms.
+    await HapticFeedback.mediumImpact();
+  } catch (_) {
+    // Fallback for devices where system haptics are unavailable.
+    try {
+      Vibration.vibrate(duration: 40);
+    } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
