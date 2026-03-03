@@ -51,9 +51,13 @@ Future<void> vibrateDevice() async {
 // File / audio storage
 // ─────────────────────────────────────────────────────────────────────────
 
-Future<String> audioFilePath(String btnId, int idx) async {
+Future<String> audioFilePath(String btnId, int idx, [int slot = 0]) async {
   final dir = await getApplicationDocumentsDirectory();
-  return '${dir.path}/td_audio_${btnId}_$idx.m4a';
+  // Slot 0 keeps the original filename format for backward compatibility.
+  if (slot == 0) {
+    return '${dir.path}/td_audio_${btnId}_$idx.m4a';
+  }
+  return '${dir.path}/td_audio_s${slot}_${btnId}_$idx.m4a';
 }
 
 Future<bool> audioFileExists(String path) async => File(path).exists();
@@ -74,14 +78,32 @@ Future<int> getAudioStorageSize() async {
   return total;
 }
 
-Future<void> clearAllAudioFiles() async {
+Future<void> clearAllAudioFiles([int slot = 0]) async {
   final dir = await getApplicationDocumentsDirectory();
   for (final f in dir.listSync()) {
-    if (f is File && f.path.contains('td_audio_')) {
-      await f.delete();
+    if (f is! File) continue;
+    final name = f.path.split(Platform.pathSeparator).last;
+    if (slot == 0) {
+      // Slot-0 files use legacy format: td_audio_<btnId>_<idx>.m4a
+      // (no s<N>_ prefix). Keep any slotted files (s1_, s2_, …) untouched.
+      if (name.startsWith('td_audio_') &&
+          !RegExp(r'^td_audio_s\d+_').hasMatch(name)) {
+        await f.delete();
+      }
+    } else {
+      if (name.startsWith('td_audio_s${slot}_')) await f.delete();
     }
   }
 }
+
+/// No-op: web audio paths are only tracked in the web platform.
+void clearAllWebAudioPaths() {}
+
+/// No-op: base64 audio conversion is only needed on web.
+Future<String?> audioBlobToBase64(String blobUrl) async => null;
+
+/// No-op: base64→blob conversion is only needed on web.
+String? audioBase64ToBlobUrl(String base64) => null;
 
 AudioRecorder createRecorder() => AudioRecorder();
 
@@ -123,7 +145,7 @@ void webPlayAudio(String url, double volume, void Function() onComplete) {
 void webStopAudio() {}
 
 /// No-op: synchronous path lookup is only needed on web.
-String audioFilePathSync(String btnId, int idx) => '';
+String audioFilePathSync(String btnId, int idx, [int slot = 0]) => '';
 
 /// No-op: synchronous existence check is only needed on web.
 bool audioFileExistsSync(String path) => false;

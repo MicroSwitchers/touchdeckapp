@@ -42,7 +42,7 @@ final Map<String, String> _webAudioPaths = {};
 AudioRecorder createRecorder() => AudioRecorder();
 
 /// Returns the recorded blob URL for this button/phrase, or '' if none.
-Future<String> audioFilePath(String btnId, int idx) async =>
+Future<String> audioFilePath(String btnId, int idx, [int slot = 0]) async =>
     _webAudioPaths['${btnId}_$idx'] ?? '';
 
 /// A path is valid if it's a non-empty blob (or data) URL we recorded.
@@ -65,8 +65,45 @@ Future<void> deleteAudioFile(String path) async {
 
 Future<int> getAudioStorageSize() async => 0;
 
-Future<void> clearAllAudioFiles() async {
+Future<void> clearAllAudioFiles([int slot = 0]) async {
   _webAudioPaths.clear();
+}
+
+/// Clear all stored blob URL paths (called when switching slots).
+/// Does NOT delete audio data from prefs — only clears the in-memory map.
+void clearAllWebAudioPaths() {
+  _webAudioPaths.clear();
+}
+
+/// Convert a blob URL to a base64 data URL via the JS tdAudio.toBase64 helper.
+/// Returns null if conversion fails or JS is unavailable.
+Future<String?> audioBlobToBase64(String blobUrl) async {
+  try {
+    final audio = globalContext['tdAudio'];
+    if (audio == null) return null;
+    final result = (audio as JSObject)
+        .callMethodVarArgs('toBase64'.toJS, [blobUrl.toJS]);
+    if (result == null) return null;
+    final jsStr = await (result as JSPromise<JSString?>).toDart;
+    return jsStr?.toDart;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Convert a base64 data URL back to a fresh blob URL via tdAudio.fromBase64.
+/// Returns null if conversion fails.
+String? audioBase64ToBlobUrl(String base64) {
+  try {
+    final audio = globalContext['tdAudio'];
+    if (audio == null) return null;
+    final result = (audio as JSObject)
+        .callMethodVarArgs('fromBase64'.toJS, [base64.toJS]);
+    if (result == null) return null;
+    return (result as JSString).toDart;
+  } catch (_) {
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -183,7 +220,7 @@ void webStopAudio() {
 }
 
 /// Synchronous path lookup — no async gaps, keeps iOS gesture context.
-String audioFilePathSync(String btnId, int idx) =>
+String audioFilePathSync(String btnId, int idx, [int slot = 0]) =>
     _webAudioPaths['${btnId}_$idx'] ?? '';
 
 /// Synchronous existence check.

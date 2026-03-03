@@ -821,10 +821,190 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ══════════════════════════════════════════════════════════════════
   //  SYSTEM TAB
   // ══════════════════════════════════════════════════════════════════
+  // ── Slot card ────────────────────────────────────────────────────────────
+  Widget _buildSlotCard(BuildContext context, AppState state, int slot) {
+    final isActive = state.currentSlot == slot;
+    final name = state.slotNames[slot];
+    return GestureDetector(
+      onTap: isActive
+          ? null
+          : () => state.switchToSlot(slot),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF312E81).withValues(alpha: 0.55)
+              : const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive
+                ? const Color(0xFF818CF8)
+                : Colors.white.withValues(alpha: 0.12),
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Slot number badge
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF4F46E5)
+                    : Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  '${slot + 1}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: isActive
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                  color: isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            // Active badge or "Tap to load" hint
+            if (isActive)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'ACTIVE',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFA5B4FC),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              )
+            else
+              Text(
+                'Tap to load',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            const SizedBox(width: 10),
+            // Rename button
+            GestureDetector(
+              onTap: () => _showRenameSlotDialog(context, state, slot),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: Colors.white.withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRenameSlotDialog(
+      BuildContext context, AppState state, int slot) async {
+    final ctrl = TextEditingController(text: state.slotNames[slot]);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Rename Slot ${slot + 1}',
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 24,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.07),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+            counterStyle:
+                TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+            hintText: 'Slot name…',
+            hintStyle:
+                TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+          ),
+          onSubmitted: (_) {
+            state.setSlotName(slot, ctrl.text);
+            Navigator.of(ctx).pop();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              state.setSlotName(slot, ctrl.text);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text(
+              'Save',
+              style: TextStyle(
+                  color: Color(0xFF818CF8), fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+  }
+
   Widget _buildSetupTab(AppState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Save Slots ──────────────────────────────────────────
+        _sectionLabel('Save Slots', Icons.bookmark_outline, const Color(0xFFA78BFA)),
+        const SizedBox(height: 8),
+        Text(
+          'Store up to 3 independent layouts. Each slot saves all buttons, settings, and voice recordings.',
+          style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+        ),
+        const SizedBox(height: 12),
+        for (int i = 0; i < 3; i++) _buildSlotCard(context, state, i),
+        const SizedBox(height: 24),
+
         // ── Fullscreen ──────────────────────────────────────────
         _sectionLabel('Display', Icons.fullscreen, const Color(0xFF64B5F6)),
         const SizedBox(height: 8),

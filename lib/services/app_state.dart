@@ -28,6 +28,9 @@ class AppState extends ChangeNotifier {
   List<AppButton> buttons = [];
   String? editingBtnId;
 
+  // ── Save slots (global — not per-slot) ───────────────────────────
+  int currentSlot = 0;
+  List<String> slotNames = ['Slot 1', 'Slot 2', 'Slot 3'];
   // ── Global settings ──────────────────────────────────────────────
   ActivationMode activationMode = ActivationMode.press;
   LabelPosition labelPos = LabelPosition.on;
@@ -149,6 +152,14 @@ class AppState extends ChangeNotifier {
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
 
+    // Load global slot metadata (not slot-prefixed).
+    currentSlot = _prefs!.getInt('activeSlot') ?? 0;
+    slotNames = [
+      _prefs!.getString('slotName_0') ?? 'Slot 1',
+      _prefs!.getString('slotName_1') ?? 'Slot 2',
+      _prefs!.getString('slotName_2') ?? 'Slot 3',
+    ];
+
     // Create recorder only on non-web platforms
     if (platform.hasRecording) {
       _recorder = platform.createRecorder();
@@ -156,6 +167,9 @@ class AppState extends ChangeNotifier {
 
     await _initTts();
     await _loadState();
+    // Restore persisted audio recordings for the active slot (web only —
+    // native recordings live as files and are referenced by path).
+    if (kIsWeb) await _loadWebAudioForSlot(currentSlot);
 
     _player.onPlayerComplete.listen((_) {
       isSpeaking = false;
@@ -233,10 +247,141 @@ class AppState extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────
   // PERSISTENCE
   // ────────────────────────────────────────────────────────────────
-  Future<void> _loadState() async {
-    final p = _prefs!;
 
-    // Buttons
+  /// Encode all current settings + buttons into a plain map ready for
+  /// jsonEncode. This is the canonical per-slot serialisation format.
+  Map<String, dynamic> _toStateMap() {
+    return {
+      'buttons': AppButton.encodeList(buttons),
+      'activationMode': activationMode.name,
+      'labelPos': labelPos.name,
+      'hapticsEnabled': hapticsEnabled,
+      'audioCueEnabled': audioCueEnabled,
+      'touchTargetScreen': touchTargetScreen,
+      'debounceTime': debounceTime,
+      'playbackGain': playbackGain,
+      'ttsVolume': ttsVolume,
+      'scanInterval': scanInterval,
+      'scanColor': scanColor,
+      'scanTick': scanTick,
+      'scanAnnounce': scanAnnounce,
+      'scanResetOnActivate': scanResetOnActivate,
+      'scanClickToBegin': scanClickToBegin,
+      'scanClickToRestart': scanClickToRestart,
+      'scanStopButton': scanStopButton,
+      'scanAltButton': scanAltButton,
+      'scanAltButtonPhrase': scanAltButtonPhrase,
+      'scanStopOnSelection': scanStopOnSelection,
+      'scanConfirmTone': scanConfirmTone,
+      'scanSubScan': scanSubScan,
+      'switchKeys': jsonEncode(switchKeys),
+      'scanConfirmKey': scanConfirmKey,
+      'settingsKey': settingsKey,
+      'selectedVoiceURI': selectedVoiceURI,
+      'ttsRate': ttsRate,
+      'outputBarPos': jsonEncode({'x': outputBarPos.dx, 'y': outputBarPos.dy}),
+      'outputBarScale': outputBarScale,
+      'showOutputBarInPositioning': showOutputBarInPositioning,
+      'bgColorName': bgColorName,
+      'guardMode': guardMode.name,
+      'guardHoldSeconds': guardHoldSeconds,
+      'guardTapCount': guardTapCount,
+      'isFullscreen': isFullscreen,
+      if (editingBtnId != null) 'editingBtnId': editingBtnId,
+    };
+  }
+
+  /// Restore all settings + buttons from a slot map (produced by [_toStateMap]).
+  void _fromStateMap(Map<String, dynamic> m) {
+    final btnJson = m['buttons'] as String?;
+    if (btnJson != null) {
+      try {
+        buttons = AppButton.decodeList(btnJson);
+      } catch (_) {
+        buttons = [_defaultButton()];
+      }
+    } else {
+      buttons = [_defaultButton()];
+    }
+
+    activationMode = ActivationMode.values.firstWhere(
+      (v) => v.name == (m['activationMode'] as String? ?? 'press'),
+      orElse: () => ActivationMode.press,
+    );
+    labelPos = LabelPosition.values.firstWhere(
+      (l) => l.name == (m['labelPos'] as String? ?? 'on'),
+      orElse: () => LabelPosition.on,
+    );
+    hapticsEnabled = m['hapticsEnabled'] as bool? ?? true;
+    audioCueEnabled = m['audioCueEnabled'] as bool? ?? true;
+    touchTargetScreen = m['touchTargetScreen'] as bool? ?? false;
+    debounceTime = (m['debounceTime'] as num?)?.toDouble() ?? 0.0;
+    playbackGain = (m['playbackGain'] as num?)?.toDouble() ?? 5.0;
+    ttsVolume = (m['ttsVolume'] as num?)?.toDouble() ?? 0.5;
+    scanInterval = (m['scanInterval'] as num?)?.toDouble() ?? 2.0;
+    scanColor = m['scanColor'] as String? ?? 'Yellow';
+    scanTick = m['scanTick'] as bool? ?? true;
+    scanAnnounce = m['scanAnnounce'] as bool? ?? true;
+    scanResetOnActivate = m['scanResetOnActivate'] as bool? ?? true;
+    scanClickToBegin = m['scanClickToBegin'] as bool? ?? true;
+    scanClickToRestart = m['scanClickToRestart'] as bool? ?? true;
+    scanStopButton = m['scanStopButton'] as bool? ?? false;
+    scanAltButton = m['scanAltButton'] as bool? ?? false;
+    scanAltButtonPhrase = m['scanAltButtonPhrase'] as String? ?? 'Something Else';
+    scanStopOnSelection = m['scanStopOnSelection'] as bool? ?? false;
+    scanConfirmTone = m['scanConfirmTone'] as bool? ?? false;
+    scanSubScan = m['scanSubScan'] as bool? ?? false;
+
+    final switchKeysJson = m['switchKeys'] as String?;
+    if (switchKeysJson != null) {
+      try {
+        final list = (jsonDecode(switchKeysJson) as List).cast<String>();
+        switchKeys = List.generate(4, (i) => i < list.length ? list[i] : '');
+      } catch (_) {
+        switchKeys = ['1', '2', '3', '4'];
+      }
+    } else {
+      switchKeys = ['1', '2', '3', '4'];
+    }
+
+    scanConfirmKey = m['scanConfirmKey'] as String? ?? ' ';
+    settingsKey = m['settingsKey'] as String? ?? '';
+    selectedVoiceURI = m['selectedVoiceURI'] as String? ?? '';
+    ttsRate = (m['ttsRate'] as num?)?.toDouble() ?? 1.0;
+    ttsVolume = (m['ttsVolume'] as num?)?.toDouble() ?? 0.5;
+
+    final obpJson = m['outputBarPos'] as String?;
+    if (obpJson != null) {
+      try {
+        final mp = jsonDecode(obpJson) as Map;
+        outputBarPos = Offset(
+            (mp['x'] as num).toDouble(), (mp['y'] as num).toDouble());
+      } catch (_) {}
+    }
+    outputBarScale = (m['outputBarScale'] as num?)?.toDouble() ?? 1.0;
+    showOutputBarInPositioning = m['showOutputBarInPositioning'] as bool? ?? true;
+    bgColorName = m['bgColorName'] as String? ?? 'Very Dark';
+
+    guardMode = GuardMode.values.firstWhere(
+      (v) => v.name == (m['guardMode'] as String? ?? 'hold'),
+      orElse: () => GuardMode.hold,
+    );
+    guardHoldSeconds = (m['guardHoldSeconds'] as num?)?.toDouble() ?? 3.0;
+    guardTapCount = m['guardTapCount'] as int? ?? 3;
+    isFullscreen = m['isFullscreen'] as bool? ?? false;
+    _applyFullscreen();
+
+    editingBtnId = m['editingBtnId'] as String?;
+    if (editingBtnId != null && !buttons.any((b) => b.id == editingBtnId)) {
+      editingBtnId = buttons.isNotEmpty ? buttons.first.id : null;
+    }
+
+    if (buttons.length > 1) touchTargetScreen = false;
+  }
+
+  /// Read the legacy flat-key format (pre-slots) — used only for one-time
+  /// migration of existing slot-0 data on first launch after upgrade.
+  void _loadLegacyState(SharedPreferences p) {
     final btnJson = p.getString('buttons');
     if (btnJson != null) {
       try {
@@ -248,7 +393,6 @@ class AppState extends ChangeNotifier {
       buttons = [_defaultButton()];
     }
 
-    // Settings
     activationMode = ActivationMode.values.firstWhere(
       (m) => m.name == (p.getString('activationMode') ?? 'press'),
       orElse: () => ActivationMode.press,
@@ -290,14 +434,14 @@ class AppState extends ChangeNotifier {
     settingsKey = p.getString('settingsKey') ?? '';
     selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
     ttsRate = p.getDouble('ttsRate') ?? 1.0;
-      ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
-      final obpJson = p.getString('outputBarPos');
+    ttsVolume = p.getDouble('ttsVolume') ?? 0.5;
+    final obpJson = p.getString('outputBarPos');
     if (obpJson != null) {
       try {
-        final m = jsonDecode(obpJson);
+        final mp = jsonDecode(obpJson) as Map;
         outputBarPos = Offset(
-          (m['x'] as num).toDouble(),
-          (m['y'] as num).toDouble(),
+          (mp['x'] as num).toDouble(),
+          (mp['y'] as num).toDouble(),
         );
       } catch (_) {}
     }
@@ -321,49 +465,74 @@ class AppState extends ChangeNotifier {
     if (buttons.length > 1) touchTargetScreen = false;
   }
 
+  Future<void> _loadState() async {
+    final p = _prefs!;
+    // Try to load this slot's JSON blob.
+    final slotJson = p.getString('slot_${currentSlot}_state');
+    if (slotJson != null) {
+      try {
+        _fromStateMap(jsonDecode(slotJson) as Map<String, dynamic>);
+        return;
+      } catch (_) {}
+    }
+    // Slot 0 migration: read the legacy flat-key format and immediately
+    // re-save in the new format so future launches use the JSON path.
+    if (currentSlot == 0) {
+      _loadLegacyState(p);
+      await saveState();
+    } else {
+      // Empty new slot: start with a single default button.
+      buttons = [_defaultButton()];
+      editingBtnId = buttons.first.id;
+    }
+  }
+
   Future<void> saveState() async {
     final p = _prefs;
     if (p == null) return; // guard: init not yet complete
-    await p.setString('buttons', AppButton.encodeList(buttons));
-    await p.setString('activationMode', activationMode.name);
-    await p.setString('labelPos', labelPos.name);
-    await p.setBool('hapticsEnabled', hapticsEnabled);
-    await p.setBool('audioCueEnabled', audioCueEnabled);
-    await p.setBool('touchTargetScreen', touchTargetScreen);
-    await p.setDouble('debounceTime', debounceTime);
-    await p.setDouble('playbackGain', playbackGain);
-    await p.setDouble('scanInterval', scanInterval);
-    await p.setString('scanColor', scanColor);
-    await p.setBool('scanTick', scanTick);
-    await p.setBool('scanAnnounce', scanAnnounce);
-    await p.setBool('scanResetOnActivate', scanResetOnActivate);
-    await p.setBool('scanClickToBegin', scanClickToBegin);
-    await p.setBool('scanClickToRestart', scanClickToRestart);
-    await p.setBool('scanStopButton', scanStopButton);
-    await p.setBool('scanAltButton', scanAltButton);
-    await p.setString('scanAltButtonPhrase', scanAltButtonPhrase);
-    await p.setBool('scanStopOnSelection', scanStopOnSelection);
-    await p.setBool('scanConfirmTone', scanConfirmTone);
-    await p.setBool('scanSubScan', scanSubScan);
-    await p.setString('switchKeys', jsonEncode(switchKeys));
-    await p.setString('scanConfirmKey', scanConfirmKey);
-    await p.setString('settingsKey', settingsKey);
-    await p.setString('selectedVoiceURI', selectedVoiceURI);
-    await p.setDouble('ttsRate', ttsRate);      await p.setDouble('ttsVolume', ttsVolume);    await p.setString(
-      'outputBarPos',
-      jsonEncode({'x': outputBarPos.dx, 'y': outputBarPos.dy}),
-    );
-    await p.setDouble('outputBarScale', outputBarScale);
-    await p.setBool('showOutputBarInPositioning', showOutputBarInPositioning);
-    await p.setString('bgColorName', bgColorName);
-    await p.setString('guardMode', guardMode.name);
-    await p.setDouble('guardHoldSeconds', guardHoldSeconds);
-    await p.setInt('guardTapCount', guardTapCount);
-    await p.setBool('isFullscreen', isFullscreen);
-    if (editingBtnId != null) {
-      await p.setString('editingBtnId', editingBtnId!);
+    await p.setString('slot_${currentSlot}_state', jsonEncode(_toStateMap()));
+  }
+
+  // ── Web audio persistence (per-slot) ─────────────────────────────
+
+  /// Save a single recorded blob URL as base64 in SharedPreferences so
+  /// it survives page reloads and slot switches.
+  Future<void> _persistWebAudio(
+      String btnId, int phraseIdx, String blobUrl) async {
+    if (!kIsWeb) return;
+    final b64 = await platform.audioBlobToBase64(blobUrl);
+    if (b64 != null && b64.isNotEmpty) {
+      await _prefs!.setString(
+          'slot_${currentSlot}_audio_${btnId}_$phraseIdx', b64);
     }
   }
+
+  /// Restore all persisted audio recordings for [slot] into the in-memory
+  /// blob-URL map so they are ready for playback.
+  Future<void> _loadWebAudioForSlot(int slot) async {
+    if (!kIsWeb) return;
+    final prefix = 'slot_${slot}_audio_';
+    final keys = _prefs!.getKeys().where((k) => k.startsWith(prefix)).toList();
+    for (final key in keys) {
+      final rest = key.substring(prefix.length); // '<btnId>_<phraseIdx>'
+      final lastUnderscore = rest.lastIndexOf('_');
+      if (lastUnderscore < 0) continue;
+      final btnId = rest.substring(0, lastUnderscore);
+      final phraseIdx = int.tryParse(rest.substring(lastUnderscore + 1));
+      if (phraseIdx == null) continue;
+      final b64 = _prefs!.getString(key);
+      if (b64 == null || b64.isEmpty) continue;
+      final blobUrl = platform.audioBase64ToBlobUrl(b64);
+      if (blobUrl == null || blobUrl.isEmpty) continue;
+      platform.storeWebAudioPath(btnId, phraseIdx, blobUrl);
+      // Ensure the hasAudio flag is consistent with the persisted recording.
+      final btnIdx = buttons.indexWhere((b) => b.id == btnId);
+      if (btnIdx >= 0 && phraseIdx < buttons[btnIdx].hasAudio.length) {
+        buttons[btnIdx].hasAudio[phraseIdx] = true;
+      }
+    }
+  }
+
 
   AppButton _defaultButton([String? id]) => AppButton(
         id: id ?? const Uuid().v4(),
@@ -371,6 +540,56 @@ class AppState extends ChangeNotifier {
         scale: 1.2,
         position: const Offset(50, 50),
       );
+
+  // ────────────────────────────────────────────────────────────────
+  // SLOT MANAGEMENT
+  // ────────────────────────────────────────────────────────────────
+
+  /// Switch to [newSlot] (0–2): saves the current slot, clears runtime audio
+  /// state, then loads the new slot's settings and audio recordings.
+  Future<void> switchToSlot(int newSlot) async {
+    if (newSlot == currentSlot || newSlot < 0 || newSlot > 2) return;
+
+    // Stop scanning and any active audio.
+    stopScan();
+    _stopTts();
+    if (kIsWeb) {
+      platform.webStopAudio();
+    } else {
+      try { await _player.stop(); } catch (_) {}
+    }
+    isSpeaking = false;
+    playingButtonId = null;
+
+    // Save current slot before leaving it.
+    await saveState();
+
+    // Switch.
+    currentSlot = newSlot;
+    await _prefs!.setInt('activeSlot', currentSlot);
+
+    // Clear in-memory web audio paths — they belong to the old slot.
+    if (kIsWeb) platform.clearAllWebAudioPaths();
+
+    // Load new slot.
+    await _loadState();
+    if (kIsWeb) await _loadWebAudioForSlot(currentSlot);
+
+    // Restart scan if the new slot uses scan activation.
+    if (activationMode == ActivationMode.scan) startScan();
+
+    notifyListeners();
+  }
+
+  /// Update the display name of [slot] and persist it globally.
+  Future<void> setSlotName(int slot, String name) async {
+    if (slot < 0 || slot > 2) return;
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    slotNames[slot] = trimmed;
+    await _prefs!.setString('slotName_$slot', trimmed);
+    notifyListeners();
+  }
 
   // ────────────────────────────────────────────────────────────────
   // BUTTON MANAGEMENT
@@ -636,7 +855,7 @@ class AppState extends ChangeNotifier {
     if (kIsWeb) {
       // Web: use synchronous path lookup + direct JS audio to avoid
       // async gaps that break iOS Safari's user-gesture context.
-      final file = platform.audioFilePathSync(btnId, phraseIdx);
+      final file = platform.audioFilePathSync(btnId, phraseIdx, currentSlot);
       if (!platform.audioFileExistsSync(file)) return;
 
       isSpeaking = true;
@@ -654,7 +873,7 @@ class AppState extends ChangeNotifier {
       });
     } else {
       // Native: use audioplayers as before
-      final file = await platform.audioFilePath(btnId, phraseIdx);
+      final file = await platform.audioFilePath(btnId, phraseIdx, currentSlot);
       if (!await platform.audioFileExists(file)) return;
 
       isSpeaking = true;
@@ -671,12 +890,12 @@ class AppState extends ChangeNotifier {
     if (!platform.hasFileAudio) return;
 
     if (kIsWeb) {
-      final file = platform.audioFilePathSync(btnId, phraseIdx);
+      final file = platform.audioFilePathSync(btnId, phraseIdx, currentSlot);
       if (!platform.audioFileExistsSync(file)) return;
       final vol = playbackGain.clamp(0.0, 40.0);
       platform.webPlayAudio(file, vol, () {});
     } else {
-      final file = await platform.audioFilePath(btnId, phraseIdx);
+      final file = await platform.audioFilePath(btnId, phraseIdx, currentSlot);
       if (!await platform.audioFileExists(file)) return;
       final vol = playbackGain.clamp(0.0, 40.0);
       await _player.setVolume(vol.clamp(0.0, 1.0));
@@ -709,7 +928,7 @@ class AppState extends ChangeNotifier {
     _currentRecordingBtnId = btnId;
     _currentRecordingIdx = phraseIdx;
 
-    final path = await platform.audioFilePath(btnId, phraseIdx);
+    final path = await platform.audioFilePath(btnId, phraseIdx, currentSlot);
 
     await _recorder.start(
       const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 128000),
@@ -730,6 +949,8 @@ class AppState extends ChangeNotifier {
         btn.hasAudio[_currentRecordingIdx!] = true;
         // On web, record_web returns a blob URL — store it so playback works.
         platform.storeWebAudioPath(_currentRecordingBtnId!, _currentRecordingIdx!, path);
+        // Persist the blob as base64 so it survives page reloads / slot switches.
+        await _persistWebAudio(_currentRecordingBtnId!, _currentRecordingIdx!, path);
         saveState();
       }
     }
@@ -746,9 +967,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> deleteRecording(String btnId, int phraseIdx) async {
-    final path = await platform.audioFilePath(btnId, phraseIdx);
+    final path = await platform.audioFilePath(btnId, phraseIdx, currentSlot);
     await platform.deleteAudioFile(path);
     platform.clearWebAudioPath(btnId, phraseIdx);
+    // Remove the persisted base64 entry for this recording.
+    if (kIsWeb) {
+      await _prefs!.remove('slot_${currentSlot}_audio_${btnId}_$phraseIdx');
+    }
     final btn = buttons.firstWhere((b) => b.id == btnId, orElse: () => _defaultButton());
     if (buttons.any((b) => b.id == btnId)) {
       btn.hasAudio[phraseIdx] = false;
@@ -762,7 +987,15 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> clearAllAudio() async {
-    await platform.clearAllAudioFiles();
+    await platform.clearAllAudioFiles(currentSlot);
+    // Remove all persisted base64 audio for the current slot.
+    if (kIsWeb) {
+      final prefix = 'slot_${currentSlot}_audio_';
+      for (final key
+          in _prefs!.getKeys().where((k) => k.startsWith(prefix)).toList()) {
+        await _prefs!.remove(key);
+      }
+    }
     for (final b in buttons) {
       b.hasAudio = [false, false, false];
     }
