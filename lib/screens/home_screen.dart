@@ -280,10 +280,19 @@ class _HomeScreenState extends State<HomeScreen> {
           // ── Main canvas with buttons ──────────────────────────────
           _buildCanvas(state),
 
-          // ── Scan overlay ──────────────────────────────────────────
+          // ── Output bar ────────────────────────────────────────────
+          OutputBar(
+            text: state.outputBarText,
+            isPlaying: state.isSpeaking,
+            position: state.outputBarPos,
+            scale: state.outputBarScale,
+          ),
+
+          // ── Scan overlays (all above OutputBar so tips are never hidden) ───
           if (state.activationMode == ActivationMode.scan &&
               !state.showSettings &&
               !state.isPositioningMode) ...[
+            // Tap-anywhere gesture catcher
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => state.activateScanTarget(),
@@ -318,25 +327,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-          ],
-
-          // ── Output bar ────────────────────────────────────────────
-          OutputBar(
-            text: state.outputBarText,
-            isPlaying: state.isSpeaking,
-            position: state.outputBarPos,
-            scale: state.outputBarScale,
-          ),
-
-          // ── Scan tip overlays (above OutputBar) ───────────────────
-          // Rendered after OutputBar so they are never hidden beneath it.
-          if (state.activationMode == ActivationMode.scan &&
-              !state.showSettings &&
-              !state.isPositioningMode) ...[  
             // "Tap to begin" hint when waiting for first switch press
             if (state.scanPaused)
               Positioned(
-                bottom: MediaQuery.of(context).padding.bottom + 28,
+                bottom: MediaQuery.of(context).padding.bottom + 80,
                 left: 0,
                 right: 0,
                 child: IgnorePointer(
@@ -344,15 +338,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
                         'Tap your switch to begin scanning',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                          color: Colors.white.withValues(alpha: 0.90),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -533,9 +527,11 @@ class _HomeScreenState extends State<HomeScreen> {
             final btnSize = 200.0 * btn.scale;
 
             final isPressed = state.activeButtonId == btn.id;
-            final isSpeakingThis =
+            // Suppress speaking glow on the button when sub-scan is active —
+            // the phrase panel is the visual indicator.
+            final isSpeakingThis = !state.inSubScan &&
                 state.isSpeaking && state.playingButtonId == btn.id;
-            // No button glows during sub-scan — the phrase panel shows what's happening.
+            // No button highlight or speaking glow during sub-scan.
             final isScanHL = state.activationMode == ActivationMode.scan &&
                 !state.inSubScan &&
                 state.buttons.indexOf(btn) == state.scanIdx;

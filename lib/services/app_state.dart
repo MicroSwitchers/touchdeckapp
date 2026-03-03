@@ -812,7 +812,13 @@ class AppState extends ChangeNotifier {
   }
 
   // Schedules a single one-shot tick after [scanInterval] seconds.
+  // Defers immediately if audio is already playing — the completion
+  // callback (_onScanSpeechOrAudioComplete) will reschedule.
   void _scheduleNextScanTick() {
+    if (isSpeaking) {
+      _scanWaitingForAudio = true;
+      return;
+    }
     _scanTimer = Timer(
       Duration(milliseconds: (scanInterval * 1000).round()),
       _onScanTick,
@@ -840,8 +846,6 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    final speakingBefore = isSpeaking;
-
     // Stop button slot
     if (scanStopButton && scanIdx == _stopSlot) {
       if (scanAnnounce && !isSpeaking) _speakTts('Stop', 'scan_stop_btn');
@@ -863,9 +867,8 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
 
-    // If this tick started a new announcement, wait for it to finish
-    // before scheduling the next advance — keeps rhythm predictable.
-    if (isSpeaking && !speakingBefore) {
+    // Wait for any active audio (new or pre-existing) before advancing.
+    if (isSpeaking) {
       _scanWaitingForAudio = true;
     } else {
       _scheduleNextScanTick();
@@ -873,15 +876,18 @@ class AppState extends ChangeNotifier {
   }
 
   // Called from every TTS/audio completion callback.
-  // Resumes the scan tick chain after the announcement finishes.
+  // Resumes either the main scan or sub-scan tick chain.
   void _onScanSpeechOrAudioComplete() {
     if (!_scanWaitingForAudio) return;
     if (activationMode != ActivationMode.scan ||
         _scanPaused ||
-        showSettings ||
-        _inSubScan) return;
+        showSettings) return;
     _scanWaitingForAudio = false;
-    _scheduleNextScanTick();
+    if (_inSubScan) {
+      _scheduleNextSubScanTick();
+    } else {
+      _scheduleNextScanTick();
+    }
   }
 
   void stopScan() {
@@ -933,28 +939,52 @@ class AppState extends ChangeNotifier {
     _subScanBtnId = btn.id;
     _subScanPhraseIdx = 0;
     _subScanValidSlots = validSlots;
+    _scanWaitingForAudio = false;
     // Announce first phrase immediately, interrupting any ongoing announcement
     _announceCurrentSubPhrase(btn, force: true);
     notifyListeners();
-    // Start the cycling timer
-    _scanTimer = Timer.periodic(
+    // Schedule first advance — wait for the announcement if it started
+    if (isSpeaking) {
+      _scanWaitingForAudio = true;
+    } else {
+      _scheduleNextSubScanTick();
+    }
+  }
+
+  // Schedules the next sub-scan advance (one-shot, audio-aware).
+  void _scheduleNextSubScanTick() {
+    if (isSpeaking) {
+      _scanWaitingForAudio = true;
+      return;
+    }
+    _scanTimer = Timer(
       Duration(milliseconds: (scanInterval * 1000).round()),
-      (_) {
-        _subScanPhraseIdx = (_subScanPhraseIdx + 1) % _subScanValidSlots.length;
-        if (scanTick) {
-          if (kIsWeb) platform.playTick();
-          else SystemSound.play(SystemSoundType.click);
-        }
-        final b = buttons.firstWhere((x) => x.id == _subScanBtnId,
-            orElse: () => _defaultButton());
-        if (!buttons.any((x) => x.id == _subScanBtnId)) {
-          stopScan();
-          return;
-        }
-        _announceCurrentSubPhrase(b);
-        notifyListeners();
-      },
+      _onSubScanTick,
     );
+  }
+
+  // Advances the sub-scan to the next phrase slot.
+  void _onSubScanTick() {
+    _scanTimer = null;
+    if (!_inSubScan) return;
+    _subScanPhraseIdx = (_subScanPhraseIdx + 1) % _subScanValidSlots.length;
+    if (scanTick) {
+      if (kIsWeb) platform.playTick();
+      else SystemSound.play(SystemSoundType.click);
+    }
+    if (!buttons.any((x) => x.id == _subScanBtnId)) {
+      stopScan();
+      return;
+    }
+    final b = buttons.firstWhere((x) => x.id == _subScanBtnId,
+        orElse: () => _defaultButton());
+    _announceCurrentSubPhrase(b);
+    notifyListeners();
+    if (isSpeaking) {
+      _scanWaitingForAudio = true;
+    } else {
+      _scheduleNextSubScanTick();
+    }
   }
 
   void _announceCurrentSubPhrase(AppButton btn, {bool force = false}) {
@@ -1034,8 +1064,14 @@ class AppState extends ChangeNotifier {
       return;
     }
     if (scanIdx < 0) {
-      // Scan has stopped — restart if the user has enabled click-to-restart.
-      if (scanClickToRestart) startScan();
+      // Scan has stopped — restart immediately with one tap (no click-to-begin
+      // pause; that only applies on first entry into scan mode).
+      if (scanClickToRestart) {
+        scanIdx = 0;
+        _scanWaitingForAudio = false;
+        notifyListeners();
+        _startScanTimer();
+      }
       return;
     }
     if (scanIdx >= buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0)) return;
