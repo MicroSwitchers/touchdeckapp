@@ -484,9 +484,8 @@ class AppState extends ChangeNotifier {
       _loadLegacyState(p);
       await saveState();
     } else {
-      // Empty new slot: start with a single default button.
-      buttons = [_defaultButton()];
-      editingBtnId = buttons.first.id;
+      // Empty new slot: reset every setting to its default.
+      _fromStateMap({});
     }
   }
 
