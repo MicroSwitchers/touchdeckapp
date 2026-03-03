@@ -1244,19 +1244,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _buildScanColorPicker(state),
                 const SizedBox(height: 24),
+                _sectionLabel('Scanning Mode', Icons.view_agenda_outlined, const Color(0xFF22D3EE)),
+                const SizedBox(height: 8),
+                Text(
+                  'Standard scans through each button. Sub-scan lets you pick which phrase to speak after choosing a button.',
+                  style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _toggleButton(
+                      label: 'Standard',
+                      icon: Icons.swap_horiz,
+                      active: !state.scanSubScan,
+                      onTap: () {
+                        state.scanSubScan = false;
+                        state.saveState();
+                        state.notify();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _toggleButton(
+                      label: 'Sub-scan',
+                      icon: Icons.format_list_bulleted,
+                      active: state.scanSubScan,
+                      onTap: () {
+                        state.scanSubScan = true;
+                        state.saveState();
+                        state.notify();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
                 _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
                 const SizedBox(height: 12),
-                _toggleRow(
-                  label: 'Sub-scan Phrases',
-                  subtitle: 'After selecting a button, scan through its phrases so you can choose which one to speak',
-                  value: state.scanSubScan,
-                  onTap: () {
-                    state.scanSubScan = !state.scanSubScan;
-                    state.saveState();
-                    state.notify();
-                  },
-                ),
-                const SizedBox(height: 8),
                 _toggleRow(
                   label: 'Audible Tick',
                   subtitle: 'Click sound on each selection change',
