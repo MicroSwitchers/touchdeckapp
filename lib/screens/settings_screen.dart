@@ -1225,6 +1225,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sectionLabel('Scan Speed', Icons.speed, const Color(0xFF22D3EE)),
+                const SizedBox(height: 8),
+                Text(
+                  'How long the scanner stays on each button before moving on.',
+                  style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+                ),
                 const SizedBox(height: 12),
                 _sliderCard(
                   label: 'Seconds per button',
@@ -1241,6 +1246,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 24),
                 _sectionLabel('Scan Highlight Colour', Icons.palette_outlined, const Color(0xFF22D3EE)),
+                const SizedBox(height: 8),
+                Text(
+                  'The colour used to highlight the currently selected button.',
+                  style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+                ),
                 const SizedBox(height: 12),
                 _buildScanColorPicker(state),
                 const SizedBox(height: 24),
@@ -1277,7 +1287,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                _sectionLabel('Scan Options', Icons.tune, const Color(0xFF22D3EE)),
+                _sectionLabel('Scanning Behaviour', Icons.tune, const Color(0xFF22D3EE)),
+                const SizedBox(height: 8),
+                Text(
+                  'Fine-tune how the scanner sounds, responds, and moves.',
+                  style: TextStyle(fontSize: 16, color: Colors.white.withValues(alpha: 0.6), height: 1.5),
+                ),
                 const SizedBox(height: 12),
                 _toggleRow(
                   icon: Icons.radio_button_checked,

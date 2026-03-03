@@ -42,11 +42,11 @@ class AppState extends ChangeNotifier {
   bool scanTick = true;
   bool scanAnnounce = true;
   bool scanResetOnActivate = true;
-  bool scanClickToBegin = false;
+  bool scanClickToBegin = true;
   bool scanStopButton = false;
   bool scanAltButton = false;
   String scanAltButtonPhrase = 'Something Else';
-  bool scanStopOnSelection = false;
+  bool scanStopOnSelection = true;
   bool scanConfirmTone = false;
   bool scanSubScan = false;
   // ── Adapted switch access ─────────────────────────────────────────
@@ -256,11 +256,11 @@ class AppState extends ChangeNotifier {
     scanTick = p.getBool('scanTick') ?? true;
     scanAnnounce = p.getBool('scanAnnounce') ?? true;
     scanResetOnActivate = p.getBool('scanResetOnActivate') ?? true;
-    scanClickToBegin = p.getBool('scanClickToBegin') ?? false;
+    scanClickToBegin = p.getBool('scanClickToBegin') ?? true;
     scanStopButton = p.getBool('scanStopButton') ?? false;
     scanAltButton = p.getBool('scanAltButton') ?? false;
     scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
-    scanStopOnSelection = p.getBool('scanStopOnSelection') ?? false;
+    scanStopOnSelection = p.getBool('scanStopOnSelection') ?? true;
     scanConfirmTone = p.getBool('scanConfirmTone') ?? false;
     scanSubScan = p.getBool('scanSubScan') ?? false;
     final switchKeysJson = p.getString('switchKeys');
