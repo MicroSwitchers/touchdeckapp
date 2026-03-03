@@ -1367,6 +1367,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _toggleRow(
+                  icon: Icons.replay_circle_filled,
+                  label: 'Click to Restart',
+                  subtitle: 'After scanning stops, press your switch again to start a new scan',
+                  value: state.scanClickToRestart,
+                  onTap: () {
+                    state.scanClickToRestart = !state.scanClickToRestart;
+                    state.saveState();
+                    state.notify();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _toggleRow(
                   icon: Icons.back_hand_outlined,
                   label: 'Show Stop Button',
                   subtitle: 'Adds a Stop option to the scan progression — select it to halt scanning',

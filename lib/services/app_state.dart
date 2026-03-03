@@ -43,6 +43,7 @@ class AppState extends ChangeNotifier {
   bool scanAnnounce = true;
   bool scanResetOnActivate = true;
   bool scanClickToBegin = true;
+  bool scanClickToRestart = true;
   bool scanStopButton = false;
   bool scanAltButton = false;
   String scanAltButtonPhrase = 'Something Else';
@@ -257,6 +258,7 @@ class AppState extends ChangeNotifier {
     scanAnnounce = p.getBool('scanAnnounce') ?? true;
     scanResetOnActivate = p.getBool('scanResetOnActivate') ?? true;
     scanClickToBegin = p.getBool('scanClickToBegin') ?? true;
+    scanClickToRestart = p.getBool('scanClickToRestart') ?? true;
     scanStopButton = p.getBool('scanStopButton') ?? false;
     scanAltButton = p.getBool('scanAltButton') ?? false;
     scanAltButtonPhrase = p.getString('scanAltButtonPhrase') ?? 'Something Else';
@@ -326,6 +328,7 @@ class AppState extends ChangeNotifier {
     await p.setBool('scanAnnounce', scanAnnounce);
     await p.setBool('scanResetOnActivate', scanResetOnActivate);
     await p.setBool('scanClickToBegin', scanClickToBegin);
+    await p.setBool('scanClickToRestart', scanClickToRestart);
     await p.setBool('scanStopButton', scanStopButton);
     await p.setBool('scanAltButton', scanAltButton);
     await p.setString('scanAltButtonPhrase', scanAltButtonPhrase);
@@ -970,7 +973,12 @@ class AppState extends ChangeNotifier {
       if (scanResetOnActivate) _startScanTimer();
       return;
     }
-    if (scanIdx < 0 || scanIdx >= buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0)) return;
+    if (scanIdx < 0) {
+      // Scan has stopped — restart if the user has enabled click-to-restart.
+      if (scanClickToRestart) startScan();
+      return;
+    }
+    if (scanIdx >= buttons.length + (scanStopButton ? 1 : 0) + (scanAltButton ? 1 : 0)) return;
     final btn = buttons[scanIdx % buttons.length];
     // Sub-scan mode: enter phrase cycling for this button (tone plays on phrase confirm, not here)
     if (scanSubScan) {
