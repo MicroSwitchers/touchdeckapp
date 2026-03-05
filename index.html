@@ -430,6 +430,28 @@
   </script>
 
   <!--
+    Service Worker auto-update.
+
+    Flutter's service worker uses skipWaiting() + clients.claim() so a freshly
+    deployed SW activates immediately in the background. Without this listener
+    the page keeps running on the old JS until the user manually refreshes.
+
+    controllerchange fires the moment the new SW claims this client.
+    We reload once (guard prevents an infinite loop on the very first install).
+  -->
+  <script>
+  (function () {
+    if (!('serviceWorker' in navigator)) return;
+    var _reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (_reloaded) return;
+      _reloaded = true;
+      window.location.reload();
+    });
+  })();
+  </script>
+
+  <!--
     iOS Safari fullscreen + text input fix.
 
     iOS Safari shows a "Typing is not allowed in full screen" banner whenever
