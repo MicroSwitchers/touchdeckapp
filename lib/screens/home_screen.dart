@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show min;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
@@ -518,13 +519,15 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
-
+        // Responsive button base size: 42 % of the smaller screen dimension,
+        // clamped between 120 px (tiny phones) and 290 px (large tablets/desktop).
+        final base = (min(w, h) * 0.42).clamp(120.0, 290.0);
         return Stack(
           children: [
             ...state.buttons.map((btn) {
             final left = w * btn.position.dx / 100;
             final top = h * btn.position.dy / 100;
-            final btnSize = 200.0 * btn.scale;
+            final btnSize = base * btn.scale;
 
             final isPressed = state.activeButtonId == btn.id;
             // Suppress speaking glow on the button when sub-scan is active —
@@ -540,6 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             Widget button = BigButton(
               data: btn,
+              baseSize: base,
               isPressed: isPressed,
               isSpeaking: isSpeakingThis,
               isScanHighlighted: isScanHL,
@@ -656,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ...state.buttons.map((btn) {
               final left = w * btn.position.dx / 100;
               final top = h * btn.position.dy / 100;
-              final btnSize = 200.0 * btn.scale;
+              final btnSize = base * btn.scale;
               final swatchSize = (btnSize * 0.22).clamp(24.0, 36.0);
               return Positioned(
                 left: left + btnSize * 0.28,

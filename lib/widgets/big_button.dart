@@ -12,6 +12,8 @@ class BigButton extends StatefulWidget {
   final bool isScanConfirmed;
   final bool showLabel;
   final bool isPositioningMode;
+  /// Responsive base pixel size (before scale). Defaults to 290.
+  final double baseSize;
   final VoidCallback? onTap;
   final VoidCallback? onTapDown;
   final VoidCallback? onTapUp;
@@ -26,6 +28,7 @@ class BigButton extends StatefulWidget {
     this.isScanConfirmed = false,
     this.showLabel = true,
     this.isPositioningMode = false,
+    this.baseSize = 290.0,
     this.onTap,
     this.onTapDown,
     this.onTapUp,
@@ -69,8 +72,10 @@ class _BigButtonState extends State<BigButton>
   Widget build(BuildContext context) {
     final c = widget.data.color;
     final pressed = widget.isPressed;
-      final size = 290.0 * widget.data.scale;
-    final depth = (22.0 * widget.data.scale).clamp(18.0, 30.0); // taller 3D slab
+    final base = widget.baseSize;
+    final f = base / 290.0; // scale factor for UI elements relative to design base
+    final size = base * widget.data.scale;
+    final depth = (22.0 * widget.data.scale * f).clamp(6.0, 30.0); // taller 3D slab
 
     // Face sits at top:0, slab peeks out below
     return FadeTransition(
@@ -281,7 +286,7 @@ class _BigButtonState extends State<BigButton>
                       child: Center(
                         child: Icon(
                           Icons.open_with_rounded,
-                          size: 52 * widget.data.scale.clamp(0.6, 1.4),
+                          size: 52 * widget.data.scale.clamp(0.6, 1.4) * f,
                           color: Colors.white.withValues(alpha: 0.85),
                         ),
                       ),
@@ -301,7 +306,7 @@ class _BigButtonState extends State<BigButton>
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal:
-                                20.0 * widget.data.scale.clamp(0.5, 1.2),
+                                20.0 * widget.data.scale.clamp(0.5, 1.2) * f,
                           ),
                           child: Text(
                             widget.data.label,
@@ -310,7 +315,7 @@ class _BigButtonState extends State<BigButton>
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize:
-                                  24.0 * widget.data.scale.clamp(0.6, 1.5),
+                                  24.0 * widget.data.scale.clamp(0.6, 1.5) * f,
                                 fontWeight: FontWeight.w900, // Extra bold for punchiness
                                 letterSpacing: 0.5,
                                 height: 1.1,

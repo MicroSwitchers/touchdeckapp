@@ -173,9 +173,12 @@ class _SplashScreenState extends State<SplashScreen>
               builder: (context, state, _) {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 520),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
                       // ── Logo + title ──────────────────────────────
                       const SizedBox(height: 40),
                       Container(
@@ -269,7 +272,9 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 28),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },

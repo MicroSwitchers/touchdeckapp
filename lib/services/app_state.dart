@@ -38,7 +38,7 @@ class AppState extends ChangeNotifier {
   bool audioCueEnabled = true;
   bool touchTargetScreen = false; // false = button, true = whole screen
   double debounceTime = 0;
-  double playbackGain = 5.0;
+  double playbackGain = 40.0;
   double ttsVolume = 0.5;
   double scanInterval = 2.0;
   String scanColor = 'Yellow';
@@ -201,7 +201,7 @@ class AppState extends ChangeNotifier {
     // ── Native platforms: use flutter_tts ──────────────────────────
     await _tts.setLanguage('en-US');
     await _tts.setSpeechRate(ttsRate);
-      await _tts.setVolume(ttsVolume);
+    await _tts.setVolume(ttsVolume);
     voices = await _tts.getVoices ?? [];
     ttsVoices = voices.map((v) {
       final m = Map<String, dynamic>.from(v as Map);
@@ -388,7 +388,7 @@ class AppState extends ChangeNotifier {
     audioCueEnabled = p.getBool('audioCueEnabled') ?? true;
     touchTargetScreen = p.getBool('touchTargetScreen') ?? false;
     debounceTime = p.getDouble('debounceTime') ?? 0;
-    playbackGain = p.getDouble('playbackGain') ?? 5.0;
+    playbackGain = p.getDouble('playbackGain') ?? 40.0;
     scanInterval = p.getDouble('scanInterval') ?? 2.0;
     scanColor = p.getString('scanColor') ?? 'Yellow';
     scanTick = p.getBool('scanTick') ?? true;
@@ -515,7 +515,7 @@ class AppState extends ChangeNotifier {
           ttsRate          = (m['ttsRate']          as num?)?.toDouble() ?? 1.0;
           ttsVolume        = (m['ttsVolume']        as num?)?.toDouble() ?? 0.5;
           selectedVoiceURI = m['selectedVoiceURI'] as String? ?? '';
-          playbackGain     = (m['playbackGain']     as num?)?.toDouble() ?? 5.0;
+          playbackGain     = (m['playbackGain']     as num?)?.toDouble() ?? 40.0;
           await saveGlobalSettings();
           _applyFullscreen();
           return;
@@ -533,7 +533,7 @@ class AppState extends ChangeNotifier {
       ttsRate          = p.getDouble('ttsRate')          ?? 1.0;
       ttsVolume        = p.getDouble('ttsVolume')        ?? 0.5;
       selectedVoiceURI = p.getString('selectedVoiceURI') ?? '';
-      playbackGain     = p.getDouble('playbackGain')     ?? 5.0;
+      playbackGain     = p.getDouble('playbackGain')     ?? 40.0;
       await saveGlobalSettings();
       _applyFullscreen();
       return;
@@ -550,7 +550,7 @@ class AppState extends ChangeNotifier {
     ttsRate          = p.getDouble('global_ttsRate')          ?? 1.0;
     ttsVolume        = p.getDouble('global_ttsVolume')        ?? 0.5;
     selectedVoiceURI = p.getString('global_selectedVoiceURI') ?? '';
-    playbackGain     = p.getDouble('global_playbackGain')     ?? 5.0;
+    playbackGain     = p.getDouble('global_playbackGain')     ?? 40.0;
     _applyFullscreen();
   }
 
@@ -923,7 +923,7 @@ class AppState extends ChangeNotifier {
       playingButtonId = btnId;
       notifyListeners();
 
-        final vol = playbackGain.clamp(0.0, 40.0);
+      final vol = playbackGain.clamp(0.0, 40.0);
       platform.webPlayAudio(file, vol, () {
         if (isSpeaking && playingButtonId == btnId) {
           isSpeaking = false;
