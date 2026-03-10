@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:math' show min;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'package:web/web.dart' as web;
 
 import '../constants.dart';
 import '../models/app_button.dart';
@@ -270,6 +273,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final isLight = _isLight(state.backgroundColor);
+
+    // On web/PWA: update the theme-color meta tag so the iOS status bar
+    // background matches the app background colour dynamically.
+    if (kIsWeb) {
+      final hex = '#${state.backgroundColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+      try {
+        (web.window as dynamic).tdSetThemeColor(hex);
+      } catch (_) {}
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
