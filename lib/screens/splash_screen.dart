@@ -271,6 +271,16 @@ class _SplashScreenState extends State<SplashScreen>
                           ],
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'by Niall Brown · Early Childhood Vision Consultant',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.35),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
                       const SizedBox(height: 28),
                         ],
                       ),
