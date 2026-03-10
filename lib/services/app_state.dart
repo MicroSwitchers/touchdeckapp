@@ -76,7 +76,7 @@ class AppState extends ChangeNotifier {
 
   /// Resolved background colour from the user's chosen preset.
   Color get backgroundColor => kBgColors
-      .firstWhere((b) => b.name == bgColorName, orElse: () => kBgColors[1])
+      .firstWhere((b) => b.name == bgColorName, orElse: () => kBgColors[4])
       .color;
 
   // ── Runtime state (not persisted) ────────────────────────────────
@@ -1007,6 +1007,10 @@ class AppState extends ChangeNotifier {
     if (path != null && _currentRecordingBtnId != null && _currentRecordingIdx != null) {
       final btn = buttons.firstWhere((b) => b.id == _currentRecordingBtnId, orElse: () => _defaultButton());
       if (buttons.any((b) => b.id == _currentRecordingBtnId)) {
+        // Guard: hasAudio list may be shorter than phrases if data was migrated.
+        while (btn.hasAudio.length <= _currentRecordingIdx!) {
+          btn.hasAudio.add(false);
+        }
         btn.hasAudio[_currentRecordingIdx!] = true;
         // On web, record_web returns a blob URL — store it so playback works.
         platform.storeWebAudioPath(_currentRecordingBtnId!, _currentRecordingIdx!, path);
@@ -1058,7 +1062,7 @@ class AppState extends ChangeNotifier {
       }
     }
     for (final b in buttons) {
-      b.hasAudio = [false, false, false];
+      b.hasAudio = List.filled(b.phrases.length, false);
     }
     saveState();
     notifyListeners();
@@ -1471,9 +1475,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void closeSettings() {
+  Future<void> closeSettings() async {
     if (isRecording) {
-      stopRecording();
+      await stopRecording();
     }
     showSettings = false;
     saveState();

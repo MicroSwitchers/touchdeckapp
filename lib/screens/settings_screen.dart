@@ -1343,7 +1343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _sliderCard(
           label: 'Debounce Time',
-          valueLabel: '${state.debounceTime}s',
+          valueLabel: '${state.debounceTime.toStringAsFixed(1)}s',
           value: state.debounceTime,
           min: 0,
           max: 5,
@@ -1419,7 +1419,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _sliderCard(
                   label: 'Seconds per button',
-                  valueLabel: '${state.scanInterval}s',
+                  valueLabel: '${state.scanInterval.toStringAsFixed(1)}s',
                   value: state.scanInterval,
                   min: 0.5,
                   max: 5.0,

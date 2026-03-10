@@ -269,10 +269,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final isLight = _isLight(state.backgroundColor);
 
-    return Scaffold(
-      body: Stack(
-        children: [
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        // iOS/iPadOS: colour the status bar area to match the app background.
+        statusBarColor: state.backgroundColor,
+        statusBarBrightness:
+            isLight ? Brightness.light : Brightness.dark,
+        statusBarIconBrightness:
+            isLight ? Brightness.dark : Brightness.light,
+        // Android edge-to-edge nav bar — keep transparent.
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isLight ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
+        body: Stack(
+          children: [
           // ── Atmospheric background ───────────────────────────────
           Positioned.fill(
             child: IgnorePointer(child: _AppBackground(baseColor: state.backgroundColor)),
@@ -366,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
 
           // ── Positioning overlay ───────────────────────────────────
-          if (state.isPositioningMode) _buildPositioningOverlay(state, _isLight(state.backgroundColor)),
+          if (state.isPositioningMode) _buildPositioningOverlay(state, isLight),
 
           // ── Settings gear + Move button (top-right) ───────────────────────
           if (!state.isPositioningMode)
@@ -376,13 +390,14 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildMoveButton(state, _isLight(state.backgroundColor)),
+                  _buildMoveButton(state, isLight),
                   const SizedBox(width: 10),
-                  _buildGearButton(state, _isLight(state.backgroundColor)),
+                  _buildGearButton(state, isLight),
                 ],
               ),
             ),
         ],
+        ),
       ),
     );
   }

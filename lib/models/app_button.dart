@@ -40,11 +40,14 @@ class AppButton {
       };
 
   factory AppButton.fromJson(Map<String, dynamic> json) {
+    final parsedPhrases = (json['phrases'] as List<dynamic>?)?.cast<String>() ?? ['', '', ''];
+    final parsedHasAudio = (json['hasAudio'] as List<dynamic>?)?.cast<bool>() ?? [false, false, false];
+    final parsedIndex = (json['phraseIndex'] as num?)?.toInt() ?? 0;
     return AppButton(
       id: json['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
       label: json['label'] as String? ?? '',
-      phrases: (json['phrases'] as List<dynamic>?)?.cast<String>() ?? ['', '', ''],
-      hasAudio: (json['hasAudio'] as List<dynamic>?)?.cast<bool>() ?? [false, false, false],
+      phrases: parsedPhrases,
+      hasAudio: parsedHasAudio,
       color: json['color'] != null
           ? ButtonColorDef.fromJson(json['color'] as Map<String, dynamic>)
           : kColors[0],
@@ -53,7 +56,9 @@ class AppButton {
         (json['posY'] as num?)?.toDouble() ?? 50,
       ),
       scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
-      phraseIndex: (json['phraseIndex'] as num?)?.toInt() ?? 0,
+      // Clamp phraseIndex so stale saved values never cause a RangeError
+      // if phrases were deleted since the last save.
+      phraseIndex: parsedIndex.clamp(0, (parsedPhrases.length - 1).clamp(0, 9)),
     );
   }
 

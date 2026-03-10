@@ -33,7 +33,7 @@
        fx="254.42857"
        fy="217.28571"
        r="102.85715"
-       gradientTransform="matrix(1.0415771,0,0,0.95149397,-32.148285,-416.64962)"
+       gradientTransform="matrix(1.1801317,0,0,1.0780654,-67.899139,-451.26142)"
        gradientUnits="userSpaceOnUse" />
     <filter
        inkscape:collect="always"
@@ -58,9 +58,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="0.875"
-     inkscape:cx="256"
-     inkscape:cy="308.57143"
+     inkscape:zoom="0.61871843"
+     inkscape:cx="165.66502"
+     inkscape:cy="247.28534"
      inkscape:window-width="1280"
      inkscape:window-height="650"
      inkscape:window-x="-6"
@@ -82,77 +82,77 @@
      fill="#09090b"
      id="rect1" />
   <rect
-     x="157.28572"
-     y="107.85715"
-     width="232"
-     height="210"
-     rx="116"
+     x="146.73413"
+     y="101.39217"
+     width="262.86154"
+     height="237.93503"
+     rx="131.43077"
      fill="#6366f1"
      id="rect2-9"
-     style="mix-blend-mode:normal;fill:#9292f4;fill-opacity:1;stroke-width:0.862316" />
+     style="mix-blend-mode:normal;fill:#9292f4;fill-opacity:1;stroke-width:0.977025" />
+  <polygon
+     points="124,392 218,318 148,318 "
+     fill="#6366f1"
+     id="polygon2-5"
+     transform="matrix(1.1330239,0,0,1.1330239,9.8000794,-49.947455)"
+     style="mix-blend-mode:normal;fill:#9ea2f7;fill-opacity:0.13198;filter:url(#filter6)" />
   <polygon
      points="218,318 148,318 124,392 "
      fill="#6366f1"
-     id="polygon2-5"
-     transform="translate(36.428571,-25.714282)"
-     style="mix-blend-mode:normal;fill:#9ea2f7;fill-opacity:0.13197969;filter:url(#filter6)" />
-  <polygon
-     points="148,318 124,392 218,318 "
-     fill="#6366f1"
      id="polygon2"
-     transform="translate(32,-29.714286)" />
+     transform="matrix(1.1330239,0,0,1.1330239,4.7824024,-54.479555)" />
   <!-- Indigo speech bubble body  (safe-zone: ~x100..412  y110..360) -->
   <rect
-     x="140"
-     y="110"
-     width="232"
-     height="210"
-     rx="116"
+     x="127.14898"
+     y="103.82008"
+     width="262.86154"
+     height="237.93503"
+     rx="131.43077"
      fill="#6366f1"
      id="rect2"
-     style="stroke-width:0.862316" />
+     style="stroke-width:0.977025" />
   <rect
-     x="143.58064"
-     y="-312.58224"
-     width="214.26727"
-     height="195.73592"
-     rx="107.13364"
+     x="131.20595"
+     y="-333.35062"
+     width="242.76994"
+     height="221.77348"
+     rx="121.38497"
      fill="#6366f1"
      id="rect2-2"
-     style="fill:url(#radialGradient6);stroke-width:0.800067"
+     style="fill:url(#radialGradient6);stroke-width:0.906495"
      transform="scale(1,-1)" />
   <!-- Bubble tail pointing bottom-left, tucked inside safe zone -->
   <!-- Three white sound-wave bars (AAC / speaking symbol) -->
   <!-- Left bar — shorter -->
   <rect
-     x="184.14285"
-     y="173.64374"
-     width="30.162258"
-     height="88.712524"
-     rx="15.081129"
+     x="177.16389"
+     y="175.92995"
+     width="34.174561"
+     height="100.51341"
+     rx="17.08728"
      fill="#ffffff"
      opacity="0.85"
      id="rect3"
-     style="stroke-width:0.887125" />
+     style="stroke-width:1.00513" />
   <!-- Centre bar — tallest -->
   <rect
-     x="240.91887"
-     y="152.35274"
-     width="30.162258"
-     height="131.29453"
-     rx="15.081129"
+     x="241.49249"
+     y="151.80673"
+     width="34.174561"
+     height="148.75984"
+     rx="17.08728"
      fill="#ffffff"
      id="rect4"
-     style="stroke-width:0.887125" />
+     style="stroke-width:1.00513" />
   <!-- Right bar — shorter -->
   <rect
-     x="297.69489"
-     y="173.64374"
-     width="30.162258"
-     height="88.712524"
-     rx="15.081129"
+     x="305.82104"
+     y="175.92995"
+     width="34.174561"
+     height="100.51341"
+     rx="17.08728"
      fill="#ffffff"
      opacity="0.85"
      id="rect5"
-     style="stroke-width:0.887125" />
+     style="stroke-width:1.00513" />
 </svg>
