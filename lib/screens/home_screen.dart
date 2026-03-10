@@ -273,10 +273,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        // iOS/iPadOS: colour the status bar area to match the app background.
+        // statusBarColor works on Android; on iOS the physical pixels
+        // behind the bar determine its colour — see the Container below.
         statusBarColor: state.backgroundColor,
+        // iOS: Brightness.dark = dark icons (use on light backgrounds).
+        //       Brightness.light = light icons (use on dark backgrounds).
         statusBarBrightness:
-            isLight ? Brightness.light : Brightness.dark,
+            isLight ? Brightness.dark : Brightness.light,
+        // Android: IconBrightness is the inverse of iOS Brightness naming.
         statusBarIconBrightness:
             isLight ? Brightness.dark : Brightness.light,
         // Android edge-to-edge nav bar — keep transparent.
@@ -285,11 +289,28 @@ class _HomeScreenState extends State<HomeScreen> {
             isLight ? Brightness.dark : Brightness.light,
       ),
       child: Scaffold(
+        backgroundColor: state.backgroundColor,
         body: Stack(
           children: [
           // ── Atmospheric background ───────────────────────────────
           Positioned.fill(
             child: IgnorePointer(child: _AppBackground(baseColor: state.backgroundColor)),
+          ),
+
+          // ── iOS status-bar colour fill ───────────────────────────
+          // On iOS, statusBarColor is ignored by the OS. The bar is
+          // always transparent and shows whatever is rendered behind it.
+          // This solid Container sits at z=0 behind everything and
+          // physically fills the status bar inset so it matches the
+          // app background colour.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).padding.top,
+            child: IgnorePointer(
+              child: Container(color: state.backgroundColor),
+            ),
           ),
 
           // ── Main canvas with buttons ──────────────────────────────
