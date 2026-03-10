@@ -417,6 +417,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+
+          // ── Attribution ───────────────────────────────────────────
+          Positioned(
+            left: 14,
+            bottom: MediaQuery.of(context).padding.bottom + 8,
+            child: IgnorePointer(
+              child: Text(
+                'by Niall Brown · Early Childhood Vision Consultant',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                  color: (isLight ? Colors.black : Colors.white)
+                      .withValues(alpha: 0.35),
+                ),
+              ),
+            ),
+          ),
         ],
         ),
       ),
