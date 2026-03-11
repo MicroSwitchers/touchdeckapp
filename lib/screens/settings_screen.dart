@@ -486,33 +486,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Block while playing toggle
-        Row(
-          children: [
-            _toggleButton(
-              label: 'Block  While  Playing',
-              icon: Icons.lock_clock,
-              active: btn.blockWhilePlaying,
-              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = true),
-            ),
-            const SizedBox(width: 8),
-            _toggleButton(
-              label: 'Allow  Interruptions',
-              icon: Icons.touch_app,
-              active: !btn.blockWhilePlaying,
-              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = false),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          btn.blockWhilePlaying
-              ? 'Taps are ignored while this message is playing — best for long phrases or songs.'
-              : 'Tapping this button again while playing will stop and restart the message.',
-          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45), height: 1.4),
-        ),
-        const SizedBox(height: 16),
-
         ...List.generate(btn.phrases.length, (idx) => _phraseRow(state, btn, idx)),
         if (btn.phrases.length < 10)
           Padding(
@@ -540,6 +513,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+        const SizedBox(height: 20),
+
+        // Interrupt playing messages
+        _sectionLabel('Interrupt Playing Messages', Icons.lock_clock, const Color(0xFF818CF8)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Block',
+              icon: Icons.lock_clock,
+              active: btn.blockWhilePlaying,
+              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = true),
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Allow',
+              icon: Icons.touch_app,
+              active: !btn.blockWhilePlaying,
+              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = false),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          btn.blockWhilePlaying
+              ? 'Taps are ignored while this message is playing — best for long phrases or songs.'
+              : 'Tapping the button while playing will stop the current message and move to the next phrase.',
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45), height: 1.4),
+        ),
         const SizedBox(height: 20),
 
         // Size slider
