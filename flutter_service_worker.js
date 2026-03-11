@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
@@ -27,7 +27,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "d6d96d41e2ab0f9307e332de567cd843
 "canvaskit/skwasm_heavy.wasm": "8034ad26ba2485dab2fd49bdd786837b",
 "favicon.png": "bfe75c09e3579456963601af6bd0f4d4",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
-"flutter_bootstrap.js": "b7b53abc66d37dc3727e9ee58b451130",
+"flutter_bootstrap.js": "bc77147d8b1f439d4532002354c12b7a",
 "icons/Icon-192.png": "fd8f4af9c192c07cbf270d1083764ad4",
 "icons/Icon-512.png": "a58f8645372482f93800ad57303493e9",
 "icons/Icon-maskable-192.png": "fd8f4af9c192c07cbf270d1083764ad4",
@@ -123,6 +123,7 @@ self.addEventListener("fetch", (event) => {
   }
   var origin = self.location.origin;
   var key = event.request.url.substring(origin.length + 1);
+  var _base = "touchdeckapp/"; if (key.startsWith(_base)) { key = key.substring(_base.length); }
   // Redirect URLs to the index.html
   if (key.indexOf('?v=') != -1) {
     key = key.split('?v=')[0];
