@@ -14,7 +14,7 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="/touchdeckapp/">
+  <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -25,7 +25,8 @@
   <!-- iOS / Android PWA meta tags -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- 'default' = opaque status bar; colour set dynamically via theme-color -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="TapDeck">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
@@ -34,6 +35,15 @@
 
   <title>TapDeck</title>
   <link rel="manifest" href="manifest.json">
+
+  <script>
+  // tdSetThemeColor — called by Dart whenever the background colour changes.
+  // Updates the theme-color meta tag so the iOS PWA status bar matches.
+  window.tdSetThemeColor = function(hex) {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) { meta.setAttribute('content', hex); }
+  };
+  </script>
 
   <!--
     TouchDeck Web Speech API helper.
