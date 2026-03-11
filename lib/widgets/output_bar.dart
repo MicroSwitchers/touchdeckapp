@@ -116,15 +116,17 @@ class _OutputBarState extends State<OutputBar>
                             transitionBuilder: (child, anim) =>
                                 FadeTransition(opacity: anim, child: child),
                             child: _hasText
-                                ? Text(
-                                    widget.text!,
-                                    key: ValueKey(widget.text),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.2,
-                                      color: Colors.white,
+                                ? SelectionContainer.disabled(
+                                    child: Text(
+                                      widget.text!,
+                                      key: ValueKey(widget.text),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.2,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   )
                                 : _WaveformBars(

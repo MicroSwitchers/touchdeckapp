@@ -12,6 +12,7 @@ class AppButton {
   Offset position; // percentage-based (0–100)
   double scale;
   int phraseIndex;
+  bool blockWhilePlaying;
 
   AppButton({
     required this.id,
@@ -22,6 +23,7 @@ class AppButton {
     Offset? position,
     this.scale = 1.0,
     this.phraseIndex = 0,
+    this.blockWhilePlaying = false,
   })  : phrases = phrases ?? [''],
         hasAudio = hasAudio ?? [false],
         color = color ?? kColors[0],
@@ -37,17 +39,15 @@ class AppButton {
         'posY': position.dy,
         'scale': scale,
         'phraseIndex': phraseIndex,
+        'blockWhilePlaying': blockWhilePlaying,
       };
 
   factory AppButton.fromJson(Map<String, dynamic> json) {
-    final parsedPhrases = (json['phrases'] as List<dynamic>?)?.cast<String>() ?? ['', '', ''];
-    final parsedHasAudio = (json['hasAudio'] as List<dynamic>?)?.cast<bool>() ?? [false, false, false];
-    final parsedIndex = (json['phraseIndex'] as num?)?.toInt() ?? 0;
     return AppButton(
       id: json['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
       label: json['label'] as String? ?? '',
-      phrases: parsedPhrases,
-      hasAudio: parsedHasAudio,
+      phrases: (json['phrases'] as List<dynamic>?)?.cast<String>() ?? ['', '', ''],
+      hasAudio: (json['hasAudio'] as List<dynamic>?)?.cast<bool>() ?? [false, false, false],
       color: json['color'] != null
           ? ButtonColorDef.fromJson(json['color'] as Map<String, dynamic>)
           : kColors[0],
@@ -56,9 +56,8 @@ class AppButton {
         (json['posY'] as num?)?.toDouble() ?? 50,
       ),
       scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
-      // Clamp phraseIndex so stale saved values never cause a RangeError
-      // if phrases were deleted since the last save.
-      phraseIndex: parsedIndex.clamp(0, (parsedPhrases.length - 1).clamp(0, 9)),
+      phraseIndex: (json['phraseIndex'] as num?)?.toInt() ?? 0,
+      blockWhilePlaying: json['blockWhilePlaying'] as bool? ?? false,
     );
   }
 
@@ -71,6 +70,7 @@ class AppButton {
     Offset? position,
     double? scale,
     int? phraseIndex,
+    bool? blockWhilePlaying,
   }) =>
       AppButton(
         id: id ?? this.id,
@@ -81,6 +81,7 @@ class AppButton {
         position: position ?? this.position,
         scale: scale ?? this.scale,
         phraseIndex: phraseIndex ?? this.phraseIndex,
+        blockWhilePlaying: blockWhilePlaying ?? this.blockWhilePlaying,
       );
 
   static String encodeList(List<AppButton> buttons) =>

@@ -485,6 +485,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Block while playing toggle
+        Row(
+          children: [
+            _toggleButton(
+              label: 'Block  While  Playing',
+              icon: Icons.lock_clock,
+              active: btn.blockWhilePlaying,
+              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = true),
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: 'Allow  Interruptions',
+              icon: Icons.touch_app,
+              active: !btn.blockWhilePlaying,
+              onTap: () => state.updateButton(btn.id, (b) => b.blockWhilePlaying = false),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          btn.blockWhilePlaying
+              ? 'Taps are ignored while this message is playing — best for long phrases or songs.'
+              : 'Tapping this button again while playing will stop and restart the message.',
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.45), height: 1.4),
+        ),
+        const SizedBox(height: 16),
+
         ...List.generate(btn.phrases.length, (idx) => _phraseRow(state, btn, idx)),
         if (btn.phrases.length < 10)
           Padding(
@@ -1343,7 +1371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         _sliderCard(
           label: 'Debounce Time',
-          valueLabel: '${state.debounceTime.toStringAsFixed(1)}s',
+          valueLabel: '${state.debounceTime}s',
           value: state.debounceTime,
           min: 0,
           max: 5,
@@ -1419,7 +1447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _sliderCard(
                   label: 'Seconds per button',
-                  valueLabel: '${state.scanInterval.toStringAsFixed(1)}s',
+                  valueLabel: '${state.scanInterval}s',
                   value: state.scanInterval,
                   min: 0.5,
                   max: 5.0,

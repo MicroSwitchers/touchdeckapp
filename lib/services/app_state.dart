@@ -76,7 +76,7 @@ class AppState extends ChangeNotifier {
 
   /// Resolved background colour from the user's chosen preset.
   Color get backgroundColor => kBgColors
-      .firstWhere((b) => b.name == bgColorName, orElse: () => kBgColors[4])
+      .firstWhere((b) => b.name == bgColorName, orElse: () => kBgColors[1])
       .color;
 
   // ── Runtime state (not persisted) ────────────────────────────────
@@ -758,6 +758,13 @@ class AppState extends ChangeNotifier {
   void activateButton(String btnId, {bool autoClearVisual = true}) {
     if (isPositioningMode || showSettings || inDebounce) return;
 
+    // Block while playing: ignore re-triggers on this button while it is
+    // currently speaking or playing audio and the setting is enabled.
+    if (isSpeaking && playingButtonId == btnId) {
+      final idx = buttons.indexWhere((b) => b.id == btnId);
+      if (idx >= 0 && buttons[idx].blockWhilePlaying) return;
+    }
+
     // Debounce
     if (debounceTime > 0) {
       inDebounce = true;
@@ -1007,10 +1014,6 @@ class AppState extends ChangeNotifier {
     if (path != null && _currentRecordingBtnId != null && _currentRecordingIdx != null) {
       final btn = buttons.firstWhere((b) => b.id == _currentRecordingBtnId, orElse: () => _defaultButton());
       if (buttons.any((b) => b.id == _currentRecordingBtnId)) {
-        // Guard: hasAudio list may be shorter than phrases if data was migrated.
-        while (btn.hasAudio.length <= _currentRecordingIdx!) {
-          btn.hasAudio.add(false);
-        }
         btn.hasAudio[_currentRecordingIdx!] = true;
         // On web, record_web returns a blob URL — store it so playback works.
         platform.storeWebAudioPath(_currentRecordingBtnId!, _currentRecordingIdx!, path);
@@ -1062,7 +1065,7 @@ class AppState extends ChangeNotifier {
       }
     }
     for (final b in buttons) {
-      b.hasAudio = List.filled(b.phrases.length, false);
+      b.hasAudio = [false, false, false];
     }
     saveState();
     notifyListeners();
@@ -1179,7 +1182,9 @@ class AppState extends ChangeNotifier {
       if (scanAnnounce) {
         final label = buttons[scanIdx].label;
         if (label.isNotEmpty && !isSpeaking) {
-          _speakTts(label, buttons[scanIdx].id);
+          // Use a 'scan:' prefix so blockWhilePlaying doesn't treat the
+          // scan announcement as the button's own active playback.
+          _speakTts(label, 'scan:${buttons[scanIdx].id}');
         }
       }
       showOutputBar(buttons[scanIdx].label);
@@ -1475,9 +1480,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> closeSettings() async {
+  void closeSettings() {
     if (isRecording) {
-      await stopRecording();
+      stopRecording();
     }
     showSettings = false;
     saveState();
